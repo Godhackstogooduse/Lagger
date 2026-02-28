@@ -1,0 +1,424 @@
+-- Comprehensive Game Development Tool
+-- Features: Performance Monitoring, Server Stats, Anti-Exploit Detection, GUI Controls
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "GameDevTool"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 400, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(0, 170, 255)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+-- Title Bar
+local titleBar = Instance.new("TextLabel")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+titleBar.Text = "Game Dev Tool"
+titleBar.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleBar.TextSize = 18
+titleBar.Font = Enum.Font.SourceSansBold
+titleBar.Parent = mainFrame
+
+-- Close Button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "CloseButton"
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 16
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.Parent = titleBar
+
+closeBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- Scroll Frame for content
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "ContentScroll"
+scrollFrame.Size = UDim2.new(1, -20, 1, -60)
+scrollFrame.Position = UDim2.new(0, 10, 0, 50)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
+scrollFrame.Parent = mainFrame
+
+-- Stats Display Section
+local statsSection = Instance.new("Frame")
+statsSection.Name = "StatsSection"
+statsSection.Size = UDim2.new(1, -10, 0, 200)
+statsSection.Position = UDim2.new(0, 5, 0, 5)
+statsSection.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+statsSection.BorderSizePixel = 1
+statsSection.BorderColor3 = Color3.fromRGB(0, 170, 255)
+statsSection.Parent = scrollFrame
+
+local statsTitle = Instance.new("TextLabel")
+statsTitle.Size = UDim2.new(1, 0, 0, 30)
+statsTitle.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+statsTitle.Text = "Performance Stats"
+statsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+statsTitle.TextSize = 16
+statsTitle.Font = Enum.Font.SourceSansBold
+statsTitle.Parent = statsSection
+
+-- FPS Counter
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Name = "FPSLabel"
+fpsLabel.Size = UDim2.new(1, -10, 0, 25)
+fpsLabel.Position = UDim2.new(0, 5, 0, 35)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Text = "FPS: 0"
+fpsLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+fpsLabel.TextSize = 14
+fpsLabel.Font = Enum.Font.SourceSans
+fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+fpsLabel.Parent = statsSection
+
+-- Ping Label
+local pingLabel = Instance.new("TextLabel")
+pingLabel.Name = "PingLabel"
+pingLabel.Size = UDim2.new(1, -10, 0, 25)
+pingLabel.Position = UDim2.new(0, 5, 0, 65)
+pingLabel.BackgroundTransparency = 1
+pingLabel.Text = "Ping: 0 ms"
+pingLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+pingLabel.TextSize = 14
+pingLabel.Font = Enum.Font.SourceSans
+pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+pingLabel.Parent = statsSection
+
+-- Memory Label
+local memoryLabel = Instance.new("TextLabel")
+memoryLabel.Name = "MemoryLabel"
+memoryLabel.Size = UDim2.new(1, -10, 0, 25)
+memoryLabel.Position = UDim2.new(0, 5, 0, 95)
+memoryLabel.BackgroundTransparency = 1
+memoryLabel.Text = "Memory: 0 MB"
+memoryLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+memoryLabel.TextSize = 14
+memoryLabel.Font = Enum.Font.SourceSans
+memoryLabel.TextXAlignment = Enum.TextXAlignment.Left
+memoryLabel.Parent = statsSection
+
+-- Player Count Label
+local playerCountLabel = Instance.new("TextLabel")
+playerCountLabel.Name = "PlayerCountLabel"
+playerCountLabel.Size = UDim2.new(1, -10, 0, 25)
+playerCountLabel.Position = UDim2.new(0, 5, 0, 125)
+playerCountLabel.BackgroundTransparency = 1
+playerCountLabel.Text = "Players: 0"
+playerCountLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+playerCountLabel.TextSize = 14
+playerCountLabel.Font = Enum.Font.SourceSans
+playerCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerCountLabel.Parent = statsSection
+
+-- Server Stats Section
+local serverSection = Instance.new("Frame")
+serverSection.Name = "ServerSection"
+serverSection.Size = UDim2.new(1, -10, 0, 150)
+serverSection.Position = UDim2.new(0, 5, 0, 215)
+serverSection.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+serverSection.BorderSizePixel = 1
+serverSection.BorderColor3 = Color3.fromRGB(0, 170, 255)
+serverSection.Parent = scrollFrame
+
+local serverTitle = Instance.new("TextLabel")
+serverTitle.Size = UDim2.new(1, 0, 0, 30)
+serverTitle.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+serverTitle.Text = "Server Information"
+serverTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+serverTitle.TextSize = 16
+serverTitle.Font = Enum.Font.SourceSansBold
+serverTitle.Parent = serverSection
+
+-- Server FPS
+local serverFpsLabel = Instance.new("TextLabel")
+serverFpsLabel.Name = "ServerFPS"
+serverFpsLabel.Size = UDim2.new(1, -10, 0, 25)
+serverFpsLabel.Position = UDim2.new(0, 5, 0, 35)
+serverFpsLabel.BackgroundTransparency = 1
+serverFpsLabel.Text = "Server Heartbeat: N/A"
+serverFpsLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+serverFpsLabel.TextSize = 14
+serverFpsLabel.Font = Enum.Font.SourceSans
+serverFpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+serverFpsLabel.Parent = serverSection
+
+-- Data Received
+local dataReceivedLabel = Instance.new("TextLabel")
+dataReceivedLabel.Name = "DataReceived"
+dataReceivedLabel.Size = UDim2.new(1, -10, 0, 25)
+dataReceivedLabel.Position = UDim2.new(0, 5, 0, 65)
+dataReceivedLabel.BackgroundTransparency = 1
+dataReceivedLabel.Text = "Data Received: 0 KB/s"
+dataReceivedLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+dataReceivedLabel.TextSize = 14
+dataReceivedLabel.Font = Enum.Font.SourceSans
+dataReceivedLabel.TextXAlignment = Enum.TextXAlignment.Left
+dataReceivedLabel.Parent = serverSection
+
+-- Data Sent
+local dataSentLabel = Instance.new("TextLabel")
+dataSentLabel.Name = "DataSent"
+dataSentLabel.Size = UDim2.new(1, -10, 0, 25)
+dataSentLabel.Position = UDim2.new(0, 5, 0, 95)
+dataSentLabel.BackgroundTransparency = 1
+dataSentLabel.Text = "Data Sent: 0 KB/s"
+dataSentLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+dataSentLabel.TextSize = 14
+dataSentLabel.Font = Enum.Font.SourceSans
+dataSentLabel.TextXAlignment = Enum.TextXAlignment.Left
+dataSentLabel.Parent = serverSection
+
+-- Anti-Exploit Section
+local antiExploitSection = Instance.new("Frame")
+antiExploitSection.Name = "AntiExploitSection"
+antiExploitSection.Size = UDim2.new(1, -10, 0, 180)
+antiExploitSection.Position = UDim2.new(0, 5, 0, 375)
+antiExploitSection.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+antiExploitSection.BorderSizePixel = 1
+antiExploitSection.BorderColor3 = Color3.fromRGB(255, 100, 0)
+antiExploitSection.Parent = scrollFrame
+
+local antiExploitTitle = Instance.new("TextLabel")
+antiExploitTitle.Size = UDim2.new(1, 0, 0, 30)
+antiExploitTitle.BackgroundColor3 = Color3.fromRGB(200, 80, 0)
+antiExploitTitle.Text = "Anti-Exploit Monitor"
+antiExploitTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+antiExploitTitle.TextSize = 16
+antiExploitTitle.Font = Enum.Font.SourceSansBold
+antiExploitTitle.Parent = antiExploitSection
+
+-- Toggle for Speed Detection
+local speedToggle = Instance.new("TextButton")
+speedToggle.Name = "SpeedToggle"
+speedToggle.Size = UDim2.new(0.9, 0, 0, 30)
+speedToggle.Position = UDim2.new(0.05, 0, 0, 40)
+speedToggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+speedToggle.Text = "Speed Detection: OFF"
+speedToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+speedToggle.TextSize = 14
+speedToggle.Font = Enum.Font.SourceSans
+speedToggle.Parent = antiExploitSection
+
+local speedDetectionEnabled = false
+speedToggle.MouseButton1Click:Connect(function()
+	speedDetectionEnabled = not speedDetectionEnabled
+	if speedDetectionEnabled then
+		speedToggle.Text = "Speed Detection: ON"
+		speedToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+		speedToggle.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+	else
+		speedToggle.Text = "Speed Detection: OFF"
+		speedToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+		speedToggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	end
+end)
+
+-- Toggle for Fly Detection
+local flyToggle = Instance.new("TextButton")
+flyToggle.Name = "FlyToggle"
+flyToggle.Size = UDim2.new(0.9, 0, 0, 30)
+flyToggle.Position = UDim2.new(0.05, 0, 0, 80)
+flyToggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+flyToggle.Text = "Fly Detection: OFF"
+flyToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+flyToggle.TextSize = 14
+flyToggle.Font = Enum.Font.SourceSans
+flyToggle.Parent = antiExploitSection
+
+local flyDetectionEnabled = false
+flyToggle.MouseButton1Click:Connect(function()
+	flyDetectionEnabled = not flyDetectionEnabled
+	if flyDetectionEnabled then
+		flyToggle.Text = "Fly Detection: ON"
+		flyToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+		flyToggle.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+	else
+		flyToggle.Text = "Fly Detection: OFF"
+		flyToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+		flyToggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	end
+end)
+
+-- Alert Log
+local alertLog = Instance.new("TextLabel")
+alertLog.Name = "AlertLog"
+alertLog.Size = UDim2.new(0.9, 0, 0, 50)
+alertLog.Position = UDim2.new(0.05, 0, 0, 120)
+alertLog.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+alertLog.BorderSizePixel = 1
+alertLog.BorderColor3 = Color3.fromRGB(255, 0, 0)
+alertLog.Text = "No alerts"
+alertLog.TextColor3 = Color3.fromRGB(255, 255, 255)
+alertLog.TextSize = 12
+alertLog.Font = Enum.Font.SourceSans
+alertLog.TextWrapped = true
+alertLog.Parent = antiExploitSection
+
+-- Toggle Tool Section
+local toggleSection = Instance.new("Frame")
+toggleSection.Name = "ToggleSection"
+toggleSection.Size = UDim2.new(1, -10, 0, 130)
+toggleSection.Position = UDim2.new(0, 5, 0, 565)
+toggleSection.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggleSection.BorderSizePixel = 1
+toggleSection.BorderColor3 = Color3.fromRGB(0, 255, 100)
+toggleSection.Parent = scrollFrame
+
+local toggleTitle = Instance.new("TextLabel")
+toggleTitle.Size = UDim2.new(1, 0, 0, 30)
+toggleTitle.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
+toggleTitle.Text = "Tool Controls"
+toggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleTitle.TextSize = 16
+toggleTitle.Font = Enum.Font.SourceSansBold
+toggleTitle.Parent = toggleSection
+
+-- Refresh Stats Toggle
+local refreshToggle = Instance.new("TextButton")
+refreshToggle.Name = "RefreshToggle"
+refreshToggle.Size = UDim2.new(0.9, 0, 0, 30)
+refreshToggle.Position = UDim2.new(0.05, 0, 0, 40)
+refreshToggle.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+refreshToggle.Text = "Auto Refresh: ON"
+refreshToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+refreshToggle.TextSize = 14
+refreshToggle.Font = Enum.Font.SourceSans
+refreshToggle.Parent = toggleSection
+
+local autoRefreshEnabled = true
+refreshToggle.MouseButton1Click:Connect(function()
+	autoRefreshEnabled = not autoRefreshEnabled
+	if autoRefreshEnabled then
+		refreshToggle.Text = "Auto Refresh: ON"
+		refreshToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+		refreshToggle.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+	else
+		refreshToggle.Text = "Auto Refresh: OFF"
+		refreshToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+		refreshToggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	end
+end)
+
+-- Show/Hide GUI Toggle
+local guiToggle = Instance.new("TextButton")
+guiToggle.Name = "GUIToggle"
+guiToggle.Size = UDim2.new(0.9, 0, 0, 30)
+guiToggle.Position = UDim2.new(0.05, 0, 0, 80)
+guiToggle.BackgroundColor3 = Color3.fromRGB(80, 80, 180)
+guiToggle.Text = "Minimize (Press M to toggle)"
+guiToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+guiToggle.TextSize = 14
+guiToggle.Font = Enum.Font.SourceSans
+guiToggle.Parent = toggleSection
+
+-- Performance Monitoring Logic
+local lastUpdate = tick()
+local frames = 0
+local fps = 0
+
+RunService.RenderStepped:Connect(function()
+	frames = frames + 1
+	local currentTime = tick()
+
+	if currentTime - lastUpdate >= 1 then
+		fps = frames
+		frames = 0
+		lastUpdate = currentTime
+
+		if autoRefreshEnabled then
+			-- Update FPS
+			fpsLabel.Text = "FPS: " .. tostring(fps)
+
+			-- Update Ping
+			local ping = math.floor(player:GetNetworkPing() * 1000)
+			pingLabel.Text = "Ping: " .. tostring(ping) .. " ms"
+
+			-- Update Memory
+			local memory = math.floor(game:GetService("Stats"):GetTotalMemoryUsageMb())
+			memoryLabel.Text = "Memory: " .. tostring(memory) .. " MB"
+
+			-- Update Player Count
+			playerCountLabel.Text = "Players: " .. tostring(#Players:GetPlayers())
+
+			-- Update Server Stats
+			local stats = game:GetService("Stats")
+			serverFpsLabel.Text = "Server Heartbeat: " .. string.format("%.2f", stats.HeartbeatTimeMs) .. " ms"
+
+			local dataReceiveKbps = math.floor(stats.DataReceiveKbps)
+			dataReceivedLabel.Text = "Data Received: " .. tostring(dataReceiveKbps) .. " KB/s"
+
+			local dataSendKbps = math.floor(stats.DataSendKbps)
+			dataSentLabel.Text = "Data Sent: " .. tostring(dataSendKbps) .. " KB/s"
+		end
+	end
+end)
+
+-- Anti-Exploit Detection Logic
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+local lastPosition = rootPart.Position
+local suspiciousActivity = false
+
+RunService.Heartbeat:Connect(function(deltaTime)
+	if character and humanoid and rootPart then
+		-- Speed Detection
+		if speedDetectionEnabled then
+			local currentSpeed = humanoid.WalkSpeed
+			if currentSpeed > 50 then
+				alertLog.Text = "⚠️ ALERT: High speed detected (" .. tostring(math.floor(currentSpeed)) .. ")"
+				alertLog.TextColor3 = Color3.fromRGB(255, 0, 0)
+				suspiciousActivity = true
+			elseif not suspiciousActivity then
+				alertLog.Text = "No alerts"
+				alertLog.TextColor3 = Color3.fromRGB(100, 255, 100)
+			end
+		end
+
+		-- Fly Detection
+		if flyDetectionEnabled then
+			local velocity = rootPart.Velocity
+			if humanoid:GetState() ~= Enum.HumanoidStateType.Freefall and velocity.Y > 10 and not humanoid.Jump then
+				alertLog.Text = "⚠️ ALERT: Possible fly detected"
+				alertLog.TextColor3 = Color3.fromRGB(255, 0, 0)
+				suspiciousActivity = true
+			end
+		end
+
+		lastPosition = rootPart.Position
+	end
+end)
+
+-- Keyboard Toggle (M key)
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.M then
+		mainFrame.Visible = not mainFrame.Visible
+	end
+end)
+
+print("Game Dev Tool loaded! Press M to toggle visibility")
