@@ -1,218 +1,413 @@
--- ServerLoadHarness (Script) - controlled server stress test
--- Commands in server console:
---   _load start
---   _load stop
---   _load status
---   _load set cpuMs 8
---   _load set parts 200
---   _load set throwRate 20
---   _load set duration 60
+-- GUB HUB: DEVOUR EDITION (V32.6 - CUSTOM ANTI-RAGDOLL + SYNCED BAR)
+-- Version: 32.6
 
-local RunService = game:GetService("RunService")
+task.wait(0.1)
+
+-- ============================================================
+-- CUSTOM ANTI-RAGDOLL & TIGY ANTI-LAG
+-- ============================================================
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
-local Settings = {
-	enabled = false,
+local function TigyOptimize()
+    -- Internal Quality Overrides
+    pcall(function()
+        local s = getfenv().settings()
+        s.Rendering.QualityLevel = Enum.QualityLevel.Level01
+    end)
 
-	-- CPU burn per Heartbeat step (ms). Keep small; 4-12 is typical for testing.
-	cpuMsPerStep = 6,
+    pcall(function()
+        local gs = UserSettings().GameSettings
+        gs.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+        gs.GraphicsQualityLevel = 1
+    end)
 
-	-- Simple physics objects to keep the physics solver busy.
-	maxParts = 150,
+    -- Lighting & Post Processing
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 1
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
+    
+    for _, v in ipairs(Lighting:GetChildren()) do
+        if v:IsA("PostEffect") or v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") then
+            v.Enabled = false
+        end
+    end
 
-	-- How many impulses per second to apply across parts.
-	throwRatePerSec = 15,
+    -- Accessory Stripper Logic
+    local function stripAccessories(char)
+        for _,v in ipairs(char:GetChildren()) do
+            if v:IsA("Accessory") then
+                v:Destroy()
+            end
+        end
+        char.ChildAdded:Connect(function(c)
+            if c:IsA("Accessory") then
+                c:Destroy()
+            end
+        end)
+    end
 
-	-- Auto-stop after N seconds (0 = no auto-stop)
-	durationSec = 60,
-}
+    -- World Cleanup Function
+    local function Clean(v)
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.Reflectance = 0
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v.Transparency = 1
+        elseif v:IsA("MeshPart") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.Reflectance = 0
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") then
+            pcall(function() v.Enabled = false end)
+        elseif v:IsA("Humanoid") and v.Parent then
+            stripAccessories(v.Parent)
+        end
+    end
 
-local partsFolder = Instance.new("Folder")
-partsFolder.Name = "_LoadHarnessParts"
-partsFolder.Parent = Workspace
+    for _, v in ipairs(workspace:GetDescendants()) do Clean(v) end
+    workspace.DescendantAdded:Connect(Clean)
+    
+    -- Custom Anti-Ragdoll (Force Upright)
+    RunService.Heartbeat:Connect(function()
+        local char = Players.LocalPlayer.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                -- Disable states that cause falling/ragdolling
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+                -- Force recovery if state changes
+                if hum:GetState() == Enum.HumanoidStateType.Ragdoll or hum:GetState() == Enum.HumanoidStateType.FallingDown then
+                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                end
+            end
+        end
+    end)
+    
+    if setfpscap then setfpscap(999) end
+end
+task.spawn(TigyOptimize)
 
-local parts = {}
-local heartbeatConn: RBXScriptConnection? = nil
-local startedAt = 0
+-- ============================================================
+-- CORE SERVICES & OVERDRIVE CONFIG
+-- ============================================================
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
-local function now() return os.clock() end
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Backpack = LocalPlayer:WaitForChild("Backpack")
+local uiParent = (game:GetService("CoreGui"):FindFirstChild("RobloxGui") and game:GetService("CoreGui")) or PlayerGui
 
-local function burnCpu(ms: number)
-	if ms <= 0 then return end
-	local target = now() + (ms / 1000)
-	while now() < target do end
+local stealHoldTime = 1.405 
+local lockedPetUID = nil 
+local isStealing = false
+local speedEnabled = false
+local targetVelocity = 29.5
+local InternalStealCache = {}
+
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Datas = ReplicatedStorage:WaitForChild("Datas")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Utils = ReplicatedStorage:WaitForChild("Utils")
+
+local Synchronizer = require(Packages:WaitForChild("Synchronizer"))
+local AnimalsData = require(Datas:WaitForChild("Animals"))
+local AnimalsShared = require(Shared:WaitForChild("Animals"))
+local NumberUtils = require(Utils:WaitForChild("NumberUtils"))
+
+local OBSIDIAN = Color3.fromRGB(10, 10, 12)
+local AMETHYST = Color3.fromRGB(160, 80, 255)
+local GLOW_PURPLE = Color3.fromRGB(220, 0, 255)
+local DARK_PURPLE = Color3.fromRGB(30, 15, 45)
+local TEXT_LIGHT = Color3.fromRGB(250, 250, 250)
+
+-- ============================================================
+-- MAIN HUD LOADER
+-- ============================================================
+local function LoadUI(mode)
+    if uiParent:FindFirstChild("GubHubMain") then uiParent.GubHubMain:Destroy() end
+    local mainGui = Instance.new("ScreenGui", uiParent)
+    mainGui.Name = "GubHubMain"
+    
+    local mainFrame = Instance.new("Frame", mainGui)
+    mainFrame.BackgroundColor3 = OBSIDIAN
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.ClipsDescendants = true
+    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+    local mStroke = Instance.new("UIStroke", mainFrame)
+    mStroke.Color = AMETHYST
+    mStroke.Thickness = 2
+    
+    local isCollapsed = false
+    local fullSize = (mode == "PC" and UDim2.new(0, 260, 0, 340) or UDim2.new(0, 185, 0, 300))
+    local collapsedSize = (mode == "PC" and UDim2.new(0, 260, 0, 145) or UDim2.new(0, 185, 0, 135))
+
+    mainFrame.Size = fullSize
+    mainFrame.Position = (mode == "PC" and UDim2.new(0.5, -130, 0.5, -170) or UDim2.new(0.1, 0, 0.5, -150))
+
+    local title = Instance.new("TextLabel", mainFrame)
+    title.Size = UDim2.new(1, 0, 0, 45)
+    title.BackgroundTransparency = 1
+    title.Text = "GUB HUB"
+    title.Font = Enum.Font.GothamBold
+    title.TextColor3 = AMETHYST
+    title.TextSize = (mode == "PC" and 22 or 18)
+    title.ZIndex = 5
+
+    local toggleBtn = Instance.new("TextButton", mainFrame)
+    toggleBtn.Size = UDim2.new(0, 32, 0, 26)
+    toggleBtn.Position = UDim2.new(1, -38, 0, 10)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 65)
+    toggleBtn.Text = "[-]"
+    toggleBtn.TextColor3 = GLOW_PURPLE
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.ZIndex = 6
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
+
+    local contentFrame = Instance.new("Frame", mainFrame)
+    contentFrame.Size = UDim2.new(1, 0, 1, -45)
+    contentFrame.Position = UDim2.new(0, 0, 0, 45)
+    contentFrame.BackgroundTransparency = 1
+
+    local list = Instance.new("UIListLayout", contentFrame)
+    list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    list.Padding = UDim.new(0, 8)
+
+    local sBtn = Instance.new("TextButton", contentFrame)
+    sBtn.Size = UDim2.new(0.9, 0, 0, (mode == "PC" and 40 or 35))
+    sBtn.BackgroundColor3 = DARK_PURPLE
+    sBtn.Text = "SPEED: OFF"
+    sBtn.Font = Enum.Font.GothamBold
+    sBtn.TextColor3 = TEXT_LIGHT
+    Instance.new("UICorner", sBtn)
+
+    local lBtn = Instance.new("TextButton", contentFrame)
+    lBtn.Size = UDim2.new(0.9, 0, 0, (mode == "PC" and 40 or 35))
+    lBtn.BackgroundColor3 = DARK_PURPLE
+    lBtn.Text = "DEVOUR"
+    lBtn.Font = Enum.Font.GothamBold
+    lBtn.TextColor3 = TEXT_LIGHT
+    Instance.new("UICorner", lBtn)
+
+    local barBackground = Instance.new("Frame", contentFrame)
+    barBackground.Size = UDim2.new(0.9, 0, 0, 12)
+    barBackground.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+    Instance.new("UICorner", barBackground)
+    local barFill = Instance.new("Frame", barBackground)
+    barFill.Size = UDim2.new(0, 0, 1, 0)
+    barFill.BackgroundColor3 = GLOW_PURPLE
+    Instance.new("UICorner", barFill)
+    local barStroke = Instance.new("UIStroke", barBackground)
+    barStroke.Color = GLOW_PURPLE
+    barStroke.Thickness = 2
+
+    local function startLinkedSteal(prompt)
+        if isStealing then return end
+        isStealing = true
+        if not InternalStealCache[prompt] then
+            local data = {h = {}, t = {}}
+            local ok1, c1 = pcall(getconnections, prompt.PromptButtonHoldBegan)
+            local ok2, c2 = pcall(getconnections, prompt.Triggered)
+            if ok1 then for _, v in ipairs(c1) do table.insert(data.h, v.Function) end end
+            if ok2 then for _, v in ipairs(c2) do table.insert(data.t, v.Function) end end
+            InternalStealCache[prompt] = data
+        end
+        local d = InternalStealCache[prompt]
+        
+        -- Reset bar and Tween to Sync with stealHoldTime
+        barFill.Size = UDim2.new(0, 0, 1, 0)
+        local barTween = TweenService:Create(barFill, TweenInfo.new(stealHoldTime, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 1, 0)})
+        barTween:Play()
+        
+        task.spawn(function()
+            for i=1, #d.h do task.spawn(d.h[i]) end
+            task.wait(stealHoldTime)
+            for i=1, #d.t do task.spawn(d.t[i]) end
+            task.wait(0.01)
+            barFill.Size = UDim2.new(0, 0, 1, 0)
+            isStealing = false 
+        end)
+    end
+
+    local petButtons = {}
+    local currentNearestData = {}
+    for i = 1, 3 do
+        local btn = Instance.new("TextButton", contentFrame)
+        btn.Size = UDim2.new(0.9, 0, 0, (mode == "PC" and 35 or 32))
+        btn.BackgroundColor3 = DARK_PURPLE
+        btn.Text = "---"
+        btn.Font = Enum.Font.GothamBold
+        btn.TextColor3 = TEXT_LIGHT
+        btn.TextSize = (mode == "PC" and 10 or 8)
+        Instance.new("UICorner", btn)
+        local bStroke = Instance.new("UIStroke", btn)
+        bStroke.Color = Color3.fromRGB(40,40,40)
+        btn.MouseButton1Click:Connect(function() 
+            if currentNearestData[i] then
+                lockedPetUID = currentNearestData[i].uid 
+                isStealing = false
+                barFill.Size = UDim2.new(0,0,1,0)
+            end
+        end)
+        petButtons[i] = {btn = btn, stroke = bStroke}
+    end
+
+    -- DEVOUR Logic
+    local function getTarget()
+        local target, dist = nil, math.huge
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local d = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                if d < dist then dist = d target = p.Character end
+            end
+        end
+        return target or LocalPlayer.Character
+    end
+
+    lBtn.MouseButton1Click:Connect(function()
+        lBtn.Text = "WORKING"
+        local char = LocalPlayer.Character
+        local targetChar = getTarget()
+        if not char or not targetChar then lBtn.Text = "ERROR" task.wait(1) lBtn.Text = "DEVOUR" return end
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local tool = Backpack:FindFirstChild("Quantum Cloner") or char:FindFirstChild("Quantum Cloner")
+        for _, aura in ipairs(char:GetDescendants()) do
+            if aura:IsA("ParticleEmitter") or aura:IsA("Trail") then
+                for i = 1, 300 do 
+                    local c = aura:Clone()
+                    c.Parent = targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Torso")
+                    c.Enabled = true
+                    if c:IsA("ParticleEmitter") then c.Rate = 10000 end
+                end
+            end
+        end
+        if humanoid and tool then
+            humanoid:EquipTool(tool)
+            task.wait(0.1)
+            for _, t in ipairs(Backpack:GetChildren()) do if t:IsA("Tool") then t.Parent = char end end
+            task.wait(0.1)
+            tool:Activate()
+            task.spawn(function() tool:Activate() end)
+        end
+        task.delay(0.6, function() lBtn.Text = "DEVOUR" end)
+    end)
+
+    RunService.Heartbeat:Connect(function()
+        if speedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            local hum = LocalPlayer.Character.Humanoid
+            if hum.MoveDirection.Magnitude > 0 then
+                hrp.AssemblyLinearVelocity = Vector3.new(hum.MoveDirection.X * targetVelocity, hrp.AssemblyLinearVelocity.Y, hum.MoveDirection.Z * targetVelocity)
+            end
+        end
+
+        local newCache = {}
+        local plots = workspace.Plots:GetChildren()
+        for i=1, #plots do
+            local plot = plots[i]
+            local channel = Synchronizer:Get(plot.Name)
+            if channel then
+                local owner = channel:Get("Owner")
+                local isMyPlot = (typeof(owner) == "Instance" and owner == LocalPlayer) or (typeof(owner) == "table" and owner.UserId == LocalPlayer.UserId)
+                if not isMyPlot then
+                    local list = channel:Get("AnimalList")
+                    if list then
+                        for slot, data in pairs(list) do
+                            local info = AnimalsData[data.Index]
+                            if info then
+                                local genValue = AnimalsShared:GetGeneration(data.Index, data.Mutation, data.Traits, nil)
+                                table.insert(newCache, {
+                                    name = info.DisplayName or data.Index,
+                                    mps = "$" .. NumberUtils:ToString(genValue) .. "/s",
+                                    plot = plot.Name, slot = tostring(slot), uid = plot.Name .. "_" .. tostring(slot)
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local distList = {}
+        for i=1, #newCache do
+            local pet = newCache[i]
+            local pod = workspace.Plots[pet.plot].AnimalPodiums:FindFirstChild(pet.slot)
+            if pod then table.insert(distList, {data = pet, d = (hrp.Position - pod:GetPivot().Position).Magnitude}) end
+        end
+        table.sort(distList, function(a, b) return a.d < b.d end)
+
+        for i = 1, 3 do
+            local entry = distList[i]
+            local ui = petButtons[i]
+            if entry then
+                currentNearestData[i] = entry.data
+                ui.btn.Text = entry.data.name:upper() .. " | " .. entry.data.mps
+                if lockedPetUID == entry.data.uid then
+                    ui.stroke.Color = GLOW_PURPLE
+                    ui.btn.BackgroundColor3 = Color3.fromRGB(35, 0, 55)
+                    local pod = workspace.Plots[entry.data.plot].AnimalPodiums[entry.data.slot]
+                    local base = pod:FindFirstChild("Base")
+                    local spawn = base and base:FindFirstChild("Spawn")
+                    local prompt = spawn and spawn.PromptAttachment:FindFirstChildOfClass("ProximityPrompt")
+                    if prompt then startLinkedSteal(prompt) end
+                else
+                    ui.stroke.Color = Color3.fromRGB(40, 40, 40)
+                    ui.btn.BackgroundColor3 = DARK_PURPLE
+                end
+            else
+                ui.btn.Text = "---"
+            end
+        end
+    end)
+
+    sBtn.MouseButton1Click:Connect(function()
+        speedEnabled = not speedEnabled
+        sBtn.Text = speedEnabled and "ON (29.5)" or "SPEED: OFF"
+        sBtn.BackgroundColor3 = speedEnabled and AMETHYST or DARK_PURPLE
+        sBtn.TextColor3 = speedEnabled and OBSIDIAN or TEXT_LIGHT
+    end)
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        isCollapsed = not isCollapsed
+        toggleBtn.Text = isCollapsed and "[+]" or "[-]"
+        local targetSize = isCollapsed and collapsedSize or fullSize
+        TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+        sBtn.Visible = not isCollapsed
+        for _, obj in pairs(petButtons) do obj.btn.Visible = not isCollapsed end
+    end)
 end
 
-local function clearParts()
-	for _, p in ipairs(parts) do
-		if p and p.Parent then
-			p:Destroy()
-		end
-	end
-	table.clear(parts)
-end
-
-local function ensureParts()
-	-- create up to maxParts
-	while #parts < Settings.maxParts do
-		local p = Instance.new("Part")
-		p.Size = Vector3.new(2, 2, 2)
-		p.Anchored = false
-		p.CanCollide = true
-		p.TopSurface = Enum.SurfaceType.Smooth
-		p.BottomSurface = Enum.SurfaceType.Smooth
-		p.Position = Vector3.new(
-			math.random(-40, 40),
-			math.random(15, 35),
-			math.random(-40, 40)
-		)
-		p.Parent = partsFolder
-		table.insert(parts, p)
-	end
-
-	-- if reduced maxParts, delete extras
-	while #parts > Settings.maxParts do
-		local p = table.remove(parts)
-		if p and p.Parent then p:Destroy() end
-	end
-end
-
-local throwAccumulator = 0
-local function applyPhysics(dt: number)
-	if Settings.throwRatePerSec <= 0 or #parts == 0 then return end
-
-	throwAccumulator += dt * Settings.throwRatePerSec
-	local throws = math.floor(throwAccumulator)
-	if throws <= 0 then return end
-	throwAccumulator -= throws
-
-	for _ = 1, throws do
-		local p = parts[math.random(1, #parts)]
-		if p and p.Parent then
-			-- random impulse upward/sideways
-			local impulse = Vector3.new(
-				math.random(-1200, 1200),
-				math.random(800, 1800),
-				math.random(-1200, 1200)
-			)
-			-- ApplyImpulse expects force * mass; impulse is fine here
-			p:ApplyImpulse(impulse * p.AssemblyMass)
-		end
-	end
-end
-
-local function stop()
-	if not Settings.enabled then return end
-	Settings.enabled = false
-
-	if heartbeatConn then
-		heartbeatConn:Disconnect()
-		heartbeatConn = nil
-	end
-
-	clearParts()
-	warn("[LoadHarness] STOPPED")
-end
-
-local function start()
-	if Settings.enabled then return end
-	Settings.enabled = true
-	startedAt = now()
-	throwAccumulator = 0
-
-	ensureParts()
-
-	heartbeatConn = RunService.Heartbeat:Connect(function(dt)
-		if not Settings.enabled then return end
-
-		-- auto stop
-		if Settings.durationSec > 0 and (now() - startedAt) >= Settings.durationSec then
-			warn("[LoadHarness] Duration reached, auto-stopping.")
-			stop()
-			return
-		end
-
-		-- keep part count in sync
-		ensureParts()
-
-		-- physics stress
-		applyPhysics(dt)
-
-		-- CPU stress
-		burnCpu(Settings.cpuMsPerStep)
-	end)
-
-	warn(("[LoadHarness] STARTED | cpuMs=%d | parts=%d | throwRate=%d/s | duration=%ds")
-		:format(Settings.cpuMsPerStep, Settings.maxParts, Settings.throwRatePerSec, Settings.durationSec))
-end
-
-local function status()
-	warn(("[LoadHarness] enabled=%s | cpuMs=%d | parts=%d | throwRate=%d/s | duration=%ds | players=%d")
-		:format(
-			tostring(Settings.enabled),
-			Settings.cpuMsPerStep,
-			Settings.maxParts,
-			Settings.throwRatePerSec,
-			Settings.durationSec,
-			#Players:GetPlayers()
-		))
-end
-
--- Simple server-console command hook (type into Studio Server console)
-local function parseCommand(msg: string)
-	local args = string.split(msg, " ")
-	if args[1] ~= "_load" then return end
-
-	local cmd = args[2]
-	if cmd == "start" then
-		start()
-	elseif cmd == "stop" then
-		stop()
-	elseif cmd == "status" then
-		status()
-	elseif cmd == "set" then
-		local key = args[3]
-		local val = tonumber(args[4])
-		if not key or val == nil then
-			warn("[LoadHarness] Usage: _load set cpuMs|parts|throwRate|duration <number>")
-			return
-		end
-
-		if key == "cpuMs" then
-			Settings.cpuMsPerStep = math.clamp(math.floor(val), 0, 50)
-		elseif key == "parts" then
-			Settings.maxParts = math.clamp(math.floor(val), 0, 2000)
-		elseif key == "throwRate" then
-			Settings.throwRatePerSec = math.clamp(math.floor(val), 0, 200)
-		elseif key == "duration" then
-			Settings.durationSec = math.max(0, math.floor(val))
-		else
-			warn("[LoadHarness] Unknown key:", key)
-			return
-		end
-
-		warn("[LoadHarness] Updated:", key, val)
-		if Settings.enabled then
-			ensureParts()
-		end
-	else
-		warn("[LoadHarness] Commands: _load start | _load stop | _load status | _load set cpuMs|parts|throwRate|duration <n>")
-	end
-end
-
--- Studio server console messages are not directly exposed, so we use a safe in-game chat trigger:
--- Only players with UserId in allowedAdmins can run commands.
-local allowedAdmins = {
-	-- put your UserId(s) here
-	-- [12345678] = true,
-}
-
-Players.PlayerAdded:Connect(function(plr)
-	plr.Chatted:Connect(function(msg)
-		if not allowedAdmins[plr.UserId] then return end
-		parseCommand(msg)
-	end)
-end)
-
-warn("[LoadHarness] Ready. Add your UserId to allowedAdmins, then use chat commands like: _load start")
+-- LOADER UI
+local loaderGui = Instance.new("ScreenGui", uiParent)
+local loaderFrame = Instance.new("Frame", loaderGui)
+loaderFrame.Size = UDim2.new(0, 260, 0, 130)
+loaderFrame.Position = UDim2.new(0.5, -130, 0.5, -65)
+loaderFrame.BackgroundColor3 = OBSIDIAN
+Instance.new("UICorner", loaderFrame)
+Instance.new("UIStroke", loaderFrame).Color = AMETHYST
+local pcSelect = Instance.new("TextButton", loaderFrame)
+pcSelect.Size = UDim2.new(0, 100, 0, 40)
+pcSelect.Position = UDim2.new(0, 20, 0, 65)
+pcSelect.Text = "PC"
+pcSelect.BackgroundColor3 = DARK_PURPLE
+pcSelect.TextColor3 = TEXT_LIGHT
+pcSelect.Font = Enum.Font.GothamBold
+Instance.new("UICorner", pcSelect)
+local mobSelect = Instance.new("TextButton", loaderFrame)
+mobSelect.Size = UDim2.new(0, 100, 0, 40)
+mobSelect.Position = UDim2.new(0, 140, 0, 65)
+mobSelect.Text = "MOBILE"
+mobSelect.BackgroundColor3 = DARK_PURPLE
+mobSelect.TextColor3 = TEXT_LIGHT
+mobSelect.Font = Enum.Font.GothamBold
+Instance.new("UICorner", mobSelect)
+pcSelect.MouseButton1Click:Connect(function() loaderGui:Destroy() LoadUI("PC") end)
+mobSelect.MouseButton1Click:Connect(function() loaderGui:Destroy() LoadUI("MOBILE") end)
