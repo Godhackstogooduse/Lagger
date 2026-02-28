@@ -4,21 +4,7 @@ local player = Players.LocalPlayer
 
 -- List of whitelisted usernames (case-insensitive)
 local whitelistedUsers = {
- "gofrey_sab",
- "Neysemii",
- "frigotavcunpafdedans",
- "Jonathan22345668",
- "Yosta1230",
- "MitroBossXXX",
- "david_111t",
- "Amazingdaniel11dm",
- "brainot_sca3",
- "skibidibrohai",
- "trusted_0808",
- "AdoptRune84383",
- "lakakadu89",
- "ianissabot",
- "xzavegonhuhu"
+ "SkullSpecter28461",
 }
 
 -- Convert player name to lowercase and check
