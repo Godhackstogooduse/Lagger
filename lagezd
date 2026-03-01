@@ -1,131 +1,212 @@
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hum = character:WaitForChild("Humanoid")
 
 -- UI Parent Selection
 local parentUI = player:WaitForChild("PlayerGui")
 local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
 if success and coreGui then parentUI = coreGui end
 
--- MAIN GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ModHubV4"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = parentUI
+-- HELPER: Create UI Objects
+local function create(class, props)
+	local inst = Instance.new(class)
+	for i, v in pairs(props) do inst[i] = v end
+	return inst
+end
 
-local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 250, 0, 220)
-main.Position = UDim2.new(0.5, -125, 0.4, 0)
-main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-main.BorderSizePixel = 0
-main.Active = true
-main.Draggable = true
-main.Parent = screenGui
+-- MAIN CONTAINER
+local screenGui = create("ScreenGui", {Name = "EliteUtilityV5", ResetOnSpawn = false, Parent = parentUI})
+local main = create("Frame", {
+	Size = UDim2.new(0, 260, 0, 320),
+	Position = UDim2.new(0.5, -130, 0.4, 0),
+	BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+	BorderSizePixel = 0,
+	Active = true,
+	Draggable = true,
+	Parent = screenGui
+})
+create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = main})
+create("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 2, Parent = main})
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
-corner.Parent = main
+-- TOP BAR / TITLE
+local topBar = create("Frame", {
+	Size = UDim2.new(1, 0, 0, 40),
+	BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+	BorderSizePixel = 0,
+	Parent = main
+})
+create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = topBar})
+create("TextLabel", {
+	Size = UDim2.new(1, 0, 1, 0),
+	Text = "ELITE MOD HUB",
+	TextColor3 = Color3.fromRGB(255, 255, 255),
+	Font = Enum.Font.GothamBold,
+	TextSize = 14,
+	BackgroundTransparency = 1,
+	Parent = topBar
+})
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 35)
-title.Text = "UTILITY HUB"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-title.Parent = main
+-- SPEED SECTION
+create("TextLabel", {
+	Size = UDim2.new(1, -20, 0, 20),
+	Position = UDim2.new(0, 10, 0, 50),
+	Text = "SPEED BOOSTER",
+	TextColor3 = Color3.fromRGB(150, 150, 150),
+	Font = Enum.Font.GothamBold,
+	TextSize = 12,
+	BackgroundTransparency = 1,
+	TextXAlignment = "Left",
+	Parent = main
+})
 
--- 1. PACKET LAG TOGGLE (Cycles through percentages/intensity)
-local lagLevels = {0, 0.2, 0.5, 1, 5} -- 0ms, 200ms, 500ms, 1s, 5s
-local currentLagIndex = 1
+local speedInput = create("TextBox", {
+	Size = UDim2.new(0.9, 0, 0, 35),
+	Position = UDim2.new(0.05, 0, 0, 75),
+	BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+	Text = "16",
+	TextColor3 = Color3.new(1, 1, 1),
+	Font = Enum.Font.Gotham,
+	PlaceholderText = "Enter Speed...",
+	Parent = main
+})
+create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = speedInput})
 
-local lagBtn = Instance.new("TextButton")
-lagBtn.Size = UDim2.new(0.9, 0, 0, 40)
-lagBtn.Position = UDim2.new(0.05, 0, 0, 45)
-lagBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-lagBtn.Text = "Lag: OFF (0ms)"
-lagBtn.TextColor3 = Color3.new(1, 1, 1)
-lagBtn.Font = Enum.Font.Gotham
-lagBtn.TextSize = 14
-lagBtn.Parent = main
+-- PACKET SECTION
+create("TextLabel", {
+	Size = UDim2.new(1, -20, 0, 20),
+	Position = UDim2.new(0, 10, 0, 120),
+	Text = "PACKET INTENSITY (LAG)",
+	TextColor3 = Color3.fromRGB(150, 150, 150),
+	Font = Enum.Font.GothamBold,
+	TextSize = 12,
+	BackgroundTransparency = 1,
+	TextXAlignment = "Left",
+	Parent = main
+})
 
-lagBtn.MouseButton1Click:Connect(function()
-    currentLagIndex = currentLagIndex + 1
-    if currentLagIndex > #lagLevels then currentLagIndex = 1 end
-    
-    local val = lagLevels[currentLagIndex]
-    settings().Network.IncomingReplicationLag = val
-    
-    if val == 0 then
-        lagBtn.Text = "Lag: OFF (0ms)"
-        lagBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    else
-        lagBtn.Text = "Lag Intensity: " .. (val * 100) .. "% (".. (val*1000) .."ms)"
-        lagBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 50)
-    end
+-- SLIDER SYSTEM
+local sliderBg = create("Frame", {
+	Size = UDim2.new(0.9, 0, 0, 6),
+	Position = UDim2.new(0.05, 0, 0, 155),
+	BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+	BorderSizePixel = 0,
+	Parent = main
+})
+create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderBg})
+
+local sliderFill = create("Frame", {
+	Size = UDim2.new(0, 0, 1, 0),
+	BackgroundColor3 = Color3.fromRGB(120, 80, 255),
+	BorderSizePixel = 0,
+	Parent = sliderBg
+})
+create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderFill})
+
+local knob = create("Frame", {
+	Size = UDim2.new(0, 16, 0, 16),
+	Position = UDim2.new(0, -8, 0.5, -8),
+	BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+	Parent = sliderFill
+})
+create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = knob})
+
+local intensityLabel = create("TextLabel", {
+	Size = UDim2.new(1, 0, 0, 20),
+	Position = UDim2.new(0, 0, 0, 165),
+	Text = "Intensity: 0%",
+	TextColor3 = Color3.fromRGB(120, 80, 255),
+	Font = Enum.Font.GothamBold,
+	TextSize = 12,
+	BackgroundTransparency = 1,
+	Parent = main
+})
+
+-- BUTTONS
+local floodToggle = create("TextButton", {
+	Size = UDim2.new(0.9, 0, 0, 40),
+	Position = UDim2.new(0.05, 0, 0, 200),
+	BackgroundColor3 = Color3.fromRGB(180, 50, 50),
+	Text = "FLOOD PACKETS: OFF",
+	TextColor3 = Color3.new(1, 1, 1),
+	Font = Enum.Font.GothamBold,
+	Parent = main
+})
+create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = floodToggle})
+
+local resyncBtn = create("TextButton", {
+	Size = UDim2.new(0.9, 0, 0, 40),
+	Position = UDim2.new(0.05, 0, 0, 250),
+	BackgroundColor3 = Color3.fromRGB(50, 150, 50),
+	Text = "RESYNC CONNECTION",
+	TextColor3 = Color3.new(1, 1, 1),
+	Font = Enum.Font.GothamBold,
+	Parent = main
+})
+create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = resyncBtn})
+
+-- LOGIC: SLIDER
+local dragging = false
+local intensityPercent = 0
+
+local function updateSlider()
+	local mousePos = UIS:GetMouseLocation().X
+	local sliderPos = sliderBg.AbsolutePosition.X
+	local sliderWidth = sliderBg.AbsoluteSize.X
+	local percent = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
+	
+	intensityPercent = percent
+	sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+	intensityLabel.Text = "Intensity: " .. math.floor(percent * 100) .. "%"
+	
+	-- Apply Lag (Max 15 seconds)
+	if not floodActive then
+		settings().Network.IncomingReplicationLag = percent * 15
+	end
+end
+
+knob.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+end)
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
+UIS.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		updateSlider()
+	end
 end)
 
--- 2. SPEED BOOSTER
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(0.5, 0, 0, 30)
-speedLabel.Position = UDim2.new(0.05, 0, 0, 100)
-speedLabel.Text = "WalkSpeed:"
-speedLabel.TextColor3 = Color3.new(1, 1, 1)
-speedLabel.BackgroundTransparency = 1
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-speedLabel.Parent = main
-
-local speedInput = Instance.new("TextBox")
-speedInput.Size = UDim2.new(0.35, 0, 0, 30)
-speedInput.Position = UDim2.new(0.55, 0, 0, 100)
-speedInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-speedInput.Text = "16"
-speedInput.TextColor3 = Color3.new(1, 1, 1)
-speedInput.PlaceholderText = "Val"
-speedInput.Parent = main
-
-local setSpeedBtn = Instance.new("TextButton")
-setSpeedBtn.Size = UDim2.new(0.9, 0, 0, 40)
-setSpeedBtn.Position = UDim2.new(0.05, 0, 0, 140)
-setSpeedBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-setSpeedBtn.Text = "APPLY SPEED"
-setSpeedBtn.TextColor3 = Color3.new(1, 1, 1)
-setSpeedBtn.Font = Enum.Font.GothamBold
-setSpeedBtn.Parent = main
-
-setSpeedBtn.MouseButton1Click:Connect(function()
-    local val = tonumber(speedInput.Text)
-    if val and hum then
-        hum.WalkSpeed = val
-    end
+-- LOGIC: PACKET FLOOD
+local floodActive = false
+floodToggle.MouseButton1Click:Connect(function()
+	floodActive = not floodActive
+	if floodActive then
+		floodToggle.Text = "FLOOD PACKETS: ON"
+		floodToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+		settings().Network.IncomingReplicationLag = 9e9 -- Freeze effectively
+	else
+		floodToggle.Text = "FLOOD PACKETS: OFF"
+		floodToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+		settings().Network.IncomingReplicationLag = intensityPercent * 15
+	end
 end)
 
--- BLINK (FAKELAG) TOGGLE
-local blinkBtn = Instance.new("TextButton")
-blinkBtn.Size = UDim2.new(0.9, 0, 0, 30)
-blinkBtn.Position = UDim2.new(0.05, 0, 0, 185)
-blinkBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 150)
-blinkBtn.Text = "Blink (FakeLag): OFF"
-blinkBtn.TextColor3 = Color3.new(1, 1, 1)
-blinkBtn.TextSize = 12
-blinkBtn.Parent = main
-
-local blinkActive = false
-blinkBtn.MouseButton1Click:Connect(function()
-    blinkActive = not blinkActive
-    if blinkActive then
-        blinkBtn.Text = "Blink: ACTIVE"
-        settings().Network.IncomingReplicationLag = 9e9
-    else
-        blinkBtn.Text = "Blink: OFF"
-        settings().Network.IncomingReplicationLag = lagLevels[currentLagIndex]
-    end
+-- LOGIC: SPEED & RESYNC
+resyncBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("Humanoid") then
+		char.Humanoid.WalkSpeed = tonumber(speedInput.Text) or 16
+	end
+	settings().Network.IncomingReplicationLag = 0
+	intensityPercent = 0
+	sliderFill.Size = UDim2.new(0,0,1,0)
+	intensityLabel.Text = "Intensity: 0% (Resynced)"
 end)
 
--- AUTO-UPDATE ON SPAWN
-player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    hum = newChar:WaitForChild("Humanoid")
-    hum.WalkSpeed = tonumber(speedInput.Text) or 16
+speedInput.FocusLost:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("Humanoid") then
+		char.Humanoid.WalkSpeed = tonumber(speedInput.Text) or 16
+	end
 end)
