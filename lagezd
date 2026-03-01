@@ -1,149 +1,124 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local root = character:WaitForChild("HumanoidRootPart")
+local hum = character:WaitForChild("Humanoid")
 
--- Select the best place to put the UI
-local parentUI = nil
+-- Fixes GUI not appearing
+local parentUI = player:WaitForChild("PlayerGui")
 local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
-if success and coreGui then
-    parentUI = coreGui
-else
-    parentUI = player:WaitForChild("PlayerGui")
-end
+if success and coreGui then parentUI = coreGui end
 
--- MAIN UI CONTAINER
+-- UI SETUP
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "UltimateHackGui"
+screenGui.Name = "ServerLaggerV3"
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true -- Makes it ignore top bar
 screenGui.Parent = parentUI
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 280)
-mainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BorderSizePixel = 2
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 250, 0, 200)
+main.Position = UDim2.new(0.1, 0, 0.5, -100)
+main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+main.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = main
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "MULTIPURPOSE TOOL"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 18
-title.Parent = mainFrame
+title.Text = "LAG HUB [SERVER]"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.Parent = main
 
--- Helper Function to Create Buttons
-local function createButton(name, pos, color)
+local function createToggle(name, pos)
     local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Size = UDim2.new(0.9, 0, 0, 45)
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
     btn.Position = UDim2.new(0.05, 0, 0, pos)
-    btn.BackgroundColor3 = color
+    btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    btn.Text = name .. ": OFF"
     btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 16
-    btn.BorderSizePixel = 0
-    btn.Parent = mainFrame
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Parent = main
     
-    -- Round UI Corners
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = ToolPunch.new(0, 8)
-    corner.Parent = btn
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 6)
+    c.Parent = btn
     
     return btn
 end
 
--- CREATE THE BUTTONS
-local speedBtn = createButton("Speed: OFF", 60, Color3.fromRGB(200, 50, 50))
-local lagBtn = createButton("Packet Lag: OFF", 115, Color3.fromRGB(200, 50, 50))
-local freezeBtn = createButton("Screen Freeze: OFF", 170, Color3.fromRGB(200, 50, 50))
-local blinkBtn = createButton("Blink (Stay Still): OFF", 225, Color3.fromRGB(200, 50, 50))
-mainFrame.Size = UDim2.new(0, 220, 0, 285) -- Adjust height
+local physicsBtn = createToggle("Physics Lag", 50)
+local packetBtn = createToggle("Packet Flood", 100)
+local kickSafe = createToggle("Anti-Kick", 150)
 
--- LOGIC VARIABLES
-local speedToggle = false
-local lagToggle = false
-local freezeToggle = false
-local blinkToggle = false
-local ghost = nil
+-- LOGIC
+local physicsOn = false
+local packetOn = false
+local antiKick = false
 
--- 1. SPEED BOOSTER
-speedBtn.MouseButton1Click:Connect(function()
-    speedToggle = not speedToggle
-    if speedToggle then
-        speedBtn.Text = "Speed: ON (100)"
-        speedBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        humanoid.WalkSpeed = 100
-    else
-        speedBtn.Text = "Speed: OFF"
-        speedBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        humanoid.WalkSpeed = 16
+-- 1. PHYSICS LAG (Forces server to recalculate your hitboxes constantly)
+RunService.Stepped:Connect(function()
+    if physicsOn then
+        -- Rapidly toggles states to flood the server with physics updates
+        hum:ChangeState(Enum.HumanoidStateType.Physics)
+        root.Velocity = Vector3.new(0, 10000, 0) -- High velocity spoof
+        task.wait()
+        root.Velocity = Vector3.new(0, 0, 0)
     end
 end)
 
--- 2. PACKET LAG (500ms)
-lagBtn.MouseButton1Click:Connect(function()
-    lagToggle = not lagToggle
-    if lagToggle then
-        lagBtn.Text = "Packet Lag: ON"
-        lagBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        settings().Network.IncomingReplicationLag = 0.5
-    else
-        lagBtn.Text = "Packet Lag: OFF"
-        lagBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        settings().Network.IncomingReplicationLag = 0
+physicsBtn.MouseButton1Click:Connect(function()
+    physicsOn = not physicsOn
+    physicsBtn.Text = physicsOn and "Physics Lag: ON" or "Physics Lag: OFF"
+    physicsBtn.BackgroundColor3 = physicsOn and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
+end)
+
+-- 2. PACKET FLOOD (Floods remotes with junk)
+local junk = string.rep("0", 10000)
+local remotes = {}
+for _, v in pairs(game:GetDescendants()) do
+    if v:IsA("RemoteEvent") and not v.Name:lower():find("chat") then
+        table.insert(remotes, v)
+    end
+end
+
+task.spawn(function()
+    while task.wait() do
+        if packetOn then
+            for i = 1, 10 do -- Multiply spam
+                for _, remote in pairs(remotes) do
+                    pcall(function()
+                        remote:FireServer(junk, junk, junk)
+                    end)
+                end
+            end
+        end
     end
 end)
 
--- 3. NETWORK FREEZE (Permanent Lag)
-freezeBtn.MouseButton1Click:Connect(function()
-    freezeToggle = not freezeToggle
-    if freezeToggle then
-        freezeBtn.Text = "FREEZE: ON"
-        freezeBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        settings().Network.IncomingReplicationLag = 9e9
-    else
-        freezeBtn.Text = "FREEZE: OFF"
-        freezeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        settings().Network.IncomingReplicationLag = 0
-    end
+packetBtn.MouseButton1Click:Connect(function()
+    packetOn = not packetOn
+    packetBtn.Text = packetOn and "Packet Flood: ON" or "Packet Flood: OFF"
+    packetBtn.BackgroundColor3 = packetOn and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
 end)
 
--- 4. CHARACTER BLINK (Stay Still)
-blinkBtn.MouseButton1Click:Connect(function()
-    blinkToggle = not blinkToggle
-    if blinkToggle then
-        blinkBtn.Text = "Blink: ACTIVE"
-        blinkBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-        
-        -- Create Ghost Marker
-        ghost = Instance.new("Part")
-        ghost.Size = Vector3.new(2, 2, 1)
-        ghost.CFrame = character.HumanoidRootPart.CFrame
-        ghost.Anchored = true
-        ghost.CanCollide = false
-        ghost.Color = Color3.new(1, 0, 0)
-        ghost.Transparency = 0.5
-        ghost.Parent = workspace
-        
-        settings().Network.IncomingReplicationLag = 9e9
-    else
-        blinkBtn.Text = "Blink: OFF"
-        blinkBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        if ghost then ghost:Destroy() end
-        settings().Network.IncomingReplicationLag = 0
+-- 3. ANTI-KICK (Prevents your local client from timing out while lagging)
+kickSafe.MouseButton1Click:Connect(function()
+    antiKick = not antiKick
+    kickSafe.Text = antiKick and "Anti-Kick: ON" or "Anti-Kick: OFF"
+    kickSafe.BackgroundColor3 = antiKick and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
+    
+    if antiKick then
+        settings().Network.IncomingReplicationLag = 0 -- Keep your connection fresh
     end
-end)
-
--- AUTO RE-SYNC ON CHARACTER SPAWN
-player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    humanoid = newChar:WaitForChild("Humanoid")
-    if speedToggle then humanoid.WalkSpeed = 100 end
 end)
