@@ -3,210 +3,202 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
--- UI Parent Selection
-local parentUI = player:WaitForChild("PlayerGui")
-local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
-if success and coreGui then parentUI = coreGui end
+-- GUI SETUP (ResetOnSpawn = false makes it permanent)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AbyssHubV6"
+screenGui.ResetOnSpawn = false 
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = (game:GetService("CoreGui") or player:WaitForChild("PlayerGui"))
 
--- HELPER: Create UI Objects
-local function create(class, props)
-	local inst = Instance.new(class)
-	for i, v in pairs(props) do inst[i] = v end
-	return inst
-end
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 280, 0, 320)
+main.Position = UDim2.new(0.5, -140, 0.4, 0)
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+main.BorderSizePixel = 0
+main.Active = true
+main.Parent = screenGui
 
--- MAIN CONTAINER
-local screenGui = create("ScreenGui", {Name = "EliteUtilityV5", ResetOnSpawn = false, Parent = parentUI})
-local main = create("Frame", {
-	Size = UDim2.new(0, 260, 0, 320),
-	Position = UDim2.new(0.5, -130, 0.4, 0),
-	BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-	BorderSizePixel = 0,
-	Active = true,
-	Draggable = true,
-	Parent = screenGui
-})
-create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = main})
-create("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 2, Parent = main})
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = main
 
--- TOP BAR / TITLE
-local topBar = create("Frame", {
-	Size = UDim2.new(1, 0, 0, 40),
-	BackgroundColor3 = Color3.fromRGB(35, 35, 35),
-	BorderSizePixel = 0,
-	Parent = main
-})
-create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = topBar})
-create("TextLabel", {
-	Size = UDim2.new(1, 0, 1, 0),
-	Text = "ELITE MOD HUB",
-	TextColor3 = Color3.fromRGB(255, 255, 255),
-	Font = Enum.Font.GothamBold,
-	TextSize = 14,
-	BackgroundTransparency = 1,
-	Parent = topBar
-})
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 2
+stroke.Color = Color3.fromRGB(40, 40, 40)
+stroke.Parent = main
 
--- SPEED SECTION
-create("TextLabel", {
-	Size = UDim2.new(1, -20, 0, 20),
-	Position = UDim2.new(0, 10, 0, 50),
-	Text = "SPEED BOOSTER",
-	TextColor3 = Color3.fromRGB(150, 150, 150),
-	Font = Enum.Font.GothamBold,
-	TextSize = 12,
-	BackgroundTransparency = 1,
-	TextXAlignment = "Left",
-	Parent = main
-})
-
-local speedInput = create("TextBox", {
-	Size = UDim2.new(0.9, 0, 0, 35),
-	Position = UDim2.new(0.05, 0, 0, 75),
-	BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-	Text = "16",
-	TextColor3 = Color3.new(1, 1, 1),
-	Font = Enum.Font.Gotham,
-	PlaceholderText = "Enter Speed...",
-	Parent = main
-})
-create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = speedInput})
-
--- PACKET SECTION
-create("TextLabel", {
-	Size = UDim2.new(1, -20, 0, 20),
-	Position = UDim2.new(0, 10, 0, 120),
-	Text = "PACKET INTENSITY (LAG)",
-	TextColor3 = Color3.fromRGB(150, 150, 150),
-	Font = Enum.Font.GothamBold,
-	TextSize = 12,
-	BackgroundTransparency = 1,
-	TextXAlignment = "Left",
-	Parent = main
-})
-
--- SLIDER SYSTEM
-local sliderBg = create("Frame", {
-	Size = UDim2.new(0.9, 0, 0, 6),
-	Position = UDim2.new(0.05, 0, 0, 155),
-	BackgroundColor3 = Color3.fromRGB(50, 50, 50),
-	BorderSizePixel = 0,
-	Parent = main
-})
-create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderBg})
-
-local sliderFill = create("Frame", {
-	Size = UDim2.new(0, 0, 1, 0),
-	BackgroundColor3 = Color3.fromRGB(120, 80, 255),
-	BorderSizePixel = 0,
-	Parent = sliderBg
-})
-create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderFill})
-
-local knob = create("Frame", {
-	Size = UDim2.new(0, 16, 0, 16),
-	Position = UDim2.new(0, -8, 0.5, -8),
-	BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-	Parent = sliderFill
-})
-create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = knob})
-
-local intensityLabel = create("TextLabel", {
-	Size = UDim2.new(1, 0, 0, 20),
-	Position = UDim2.new(0, 0, 0, 165),
-	Text = "Intensity: 0%",
-	TextColor3 = Color3.fromRGB(120, 80, 255),
-	Font = Enum.Font.GothamBold,
-	TextSize = 12,
-	BackgroundTransparency = 1,
-	Parent = main
-})
-
--- BUTTONS
-local floodToggle = create("TextButton", {
-	Size = UDim2.new(0.9, 0, 0, 40),
-	Position = UDim2.new(0.05, 0, 0, 200),
-	BackgroundColor3 = Color3.fromRGB(180, 50, 50),
-	Text = "FLOOD PACKETS: OFF",
-	TextColor3 = Color3.new(1, 1, 1),
-	Font = Enum.Font.GothamBold,
-	Parent = main
-})
-create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = floodToggle})
-
-local resyncBtn = create("TextButton", {
-	Size = UDim2.new(0.9, 0, 0, 40),
-	Position = UDim2.new(0.05, 0, 0, 250),
-	BackgroundColor3 = Color3.fromRGB(50, 150, 50),
-	Text = "RESYNC CONNECTION",
-	TextColor3 = Color3.new(1, 1, 1),
-	Font = Enum.Font.GothamBold,
-	Parent = main
-})
-create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = resyncBtn})
-
--- LOGIC: SLIDER
-local dragging = false
-local intensityPercent = 0
-
-local function updateSlider()
-	local mousePos = UIS:GetMouseLocation().X
-	local sliderPos = sliderBg.AbsolutePosition.X
-	local sliderWidth = sliderBg.AbsoluteSize.X
-	local percent = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
-	
-	intensityPercent = percent
-	sliderFill.Size = UDim2.new(percent, 0, 1, 0)
-	intensityLabel.Text = "Intensity: " .. math.floor(percent * 100) .. "%"
-	
-	-- Apply Lag (Max 15 seconds)
-	if not floodActive then
-		settings().Network.IncomingReplicationLag = percent * 15
+-- CUSTOM DRAG SYSTEM
+local dragging, dragInput, dragStart, startPos
+main.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = main.Position
 	end
-end
-
-knob.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+end)
+main.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
 end)
 UIS.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
+
+-- TITLE
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "ABYSS NETWORK MOD"
+title.TextColor3 = Color3.fromRGB(200, 50, 255)
+title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.Parent = main
+
+-- SETTINGS STORAGE (Persists through death)
+_G.AbyssSpeed = 16
+_G.AbyssLag = 0
+
+-- SPEED SECTION
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(1, -20, 0, 20)
+speedLabel.Position = UDim2.new(0, 10, 0, 55)
+speedLabel.Text = "CUSTOM SPEED BOOSTER"
+speedLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Font = Enum.Font.GothamBold
+speedLabel.TextSize = 12
+speedLabel.TextXAlignment = "Left"
+speedLabel.Parent = main
+
+local speedBox = Instance.new("TextBox")
+speedBox.Size = UDim2.new(0.9, 0, 0, 40)
+speedBox.Position = UDim2.new(0.05, 0, 0, 80)
+speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+speedBox.Text = tostring(_G.AbyssSpeed)
+speedBox.TextColor3 = Color3.new(1, 1, 1)
+speedBox.Font = Enum.Font.Gotham
+speedBox.PlaceholderText = "Set WalkSpeed..."
+speedBox.Parent = main
+
+-- SLIDER (PACKET INTENSITY)
+local lagLabel = Instance.new("TextLabel")
+lagLabel.Size = UDim2.new(1, -20, 0, 20)
+lagLabel.Position = UDim2.new(0, 10, 0, 135)
+lagLabel.Text = "PACKET STRESS: 0%"
+lagLabel.TextColor3 = Color3.fromRGB(200, 50, 255)
+lagLabel.BackgroundTransparency = 1
+lagLabel.Font = Enum.Font.GothamBold
+lagLabel.TextSize = 12
+lagLabel.TextXAlignment = "Left"
+lagLabel.Parent = main
+
+local sliderFrame = Instance.new("Frame")
+sliderFrame.Size = UDim2.new(0.9, 0, 0, 10)
+sliderFrame.Position = UDim2.new(0.05, 0, 0, 165)
+sliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+sliderFrame.Parent = main
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new(0, 0, 1, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(200, 50, 255)
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = sliderFrame
+
+local knob = Instance.new("TextButton")
+knob.Size = UDim2.new(0, 18, 0, 18)
+knob.Position = UDim2.new(0, -9, 0.5, -9)
+knob.BackgroundColor3 = Color3.new(1, 1, 1)
+knob.Text = ""
+knob.Parent = sliderFill
+Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+-- SLIDER LOGIC
+local function updateSlider()
+	local mousePos = UIS:GetMouseLocation().X
+	local framePos = sliderFrame.AbsolutePosition.X
+	local frameWidth = sliderFrame.AbsoluteSize.X
+	local percentage = math.clamp((mousePos - framePos) / frameWidth, 0, 1)
+	
+	sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+	lagLabel.Text = "PACKET STRESS: " .. math.floor(percentage * 100) .. "%"
+	
+	-- "Harder" Packets: Scale up to 30 seconds of lag
+	_G.AbyssLag = percentage * 30
+	settings().Network.IncomingReplicationLag = _G.AbyssLag
+end
+
+local isSliding = false
+knob.MouseButton1Down:Connect(function() isSliding = true end)
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then isSliding = false end
+end)
 UIS.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+	if isSliding and input.UserInputType == Enum.UserInputType.MouseMovement then
 		updateSlider()
 	end
 end)
 
--- LOGIC: PACKET FLOOD
-local floodActive = false
-floodToggle.MouseButton1Click:Connect(function()
-	floodActive = not floodActive
-	if floodActive then
-		floodToggle.Text = "FLOOD PACKETS: ON"
-		floodToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
-		settings().Network.IncomingReplicationLag = 9e9 -- Freeze effectively
+-- ABYSSAL FLOOD (INSTANT MAX)
+local floodBtn = Instance.new("TextButton")
+floodBtn.Size = UDim2.new(0.9, 0, 0, 45)
+floodBtn.Position = UDim2.new(0.05, 0, 0, 200)
+floodBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+floodBtn.Text = "GLOBAL ABYSS: OFF"
+floodBtn.TextColor3 = Color3.new(1, 1, 1)
+floodBtn.Font = Enum.Font.GothamBold
+floodBtn.Parent = main
+
+local floodOn = false
+floodBtn.MouseButton1Click:Connect(function()
+	floodOn = not floodOn
+	if floodOn then
+		floodBtn.Text = "GLOBAL ABYSS: ACTIVE"
+		floodBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+		settings().Network.IncomingReplicationLag = 9e9 -- Hard Freeze
 	else
-		floodToggle.Text = "FLOOD PACKETS: OFF"
-		floodToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-		settings().Network.IncomingReplicationLag = intensityPercent * 15
+		floodBtn.Text = "GLOBAL ABYSS: OFF"
+		floodBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+		settings().Network.IncomingReplicationLag = _G.AbyssLag
 	end
 end)
 
--- LOGIC: SPEED & RESYNC
-resyncBtn.MouseButton1Click:Connect(function()
-	local char = player.Character
-	if char and char:FindFirstChild("Humanoid") then
-		char.Humanoid.WalkSpeed = tonumber(speedInput.Text) or 16
+-- NO RESET LOGIC: Re-applies speed whenever you spawn
+task.spawn(function()
+	while true do
+		local char = player.Character
+		if char then
+			local hum = char:FindFirstChild("Humanoid")
+			if hum then
+				hum.WalkSpeed = _G.AbyssSpeed
+			end
+		end
+		task.wait(1)
 	end
+end)
+
+speedBox.FocusLost:Connect(function()
+	_G.AbyssSpeed = tonumber(speedBox.Text) or 16
+end)
+
+local resync = Instance.new("TextButton")
+resync.Size = UDim2.new(0.9, 0, 0, 35)
+resync.Position = UDim2.new(0.05, 0, 0, 260)
+resync.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+resync.Text = "emergency Resync"
+resync.TextColor3 = Color3.new(1,1,1)
+resync.Font = Enum.Font.Gotham
+resync.Parent = main
+
+resync.MouseButton1Click:Connect(function()
+	_G.AbyssLag = 0
 	settings().Network.IncomingReplicationLag = 0
-	intensityPercent = 0
 	sliderFill.Size = UDim2.new(0,0,1,0)
-	intensityLabel.Text = "Intensity: 0% (Resynced)"
-end)
-
-speedInput.FocusLost:Connect(function()
-	local char = player.Character
-	if char and char:FindFirstChild("Humanoid") then
-		char.Humanoid.WalkSpeed = tonumber(speedInput.Text) or 16
-	end
+	lagLabel.Text = "PACKET STRESS: 0%"
+	floodOn = false
+	floodBtn.Text = "GLOBAL ABYSS: OFF"
 end)
