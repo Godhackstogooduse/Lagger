@@ -3,30 +3,30 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
--- UI Parent Selection (CoreGui for exploiters, PlayerGui for others)
+-- UI Parent Selection
 local parentUI = (game:GetService("CoreGui") or player:WaitForChild("PlayerGui"))
 
--- REMOVE OLD VERSION IF EXISTS
-local old = parentUI:FindFirstChild("AbyssHubV7")
-if old then old:Destroy() end
+-- REMOVE OLD VERSION
+if parentUI:FindFirstChild("AbyssHubV8") then parentUI.AbyssHubV8:Destroy() end
 
 -- SETTINGS PRESERVATION
 _G.AbyssSpeed = 16
 _G.AbyssLag = 0
+_G.LagActive = false
 _G.PhantomMode = false
 
--- MAIN CONTAINER (Fixed Position: Middle Right)
+-- MAIN CONTAINER (Middle Right)
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AbyssHubV7"
+screenGui.Name = "AbyssHubV8"
 screenGui.ResetOnSpawn = false 
 screenGui.Parent = parentUI
 
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 240, 0, 320)
-main.Position = UDim2.new(1, -260, 0.5, -160) -- MIDDLE RIGHT
+main.Size = UDim2.new(0, 240, 0, 360)
+main.Position = UDim2.new(1, -260, 0.5, -180) 
 main.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 main.BorderSizePixel = 0
-main.Active = true -- Still active so buttons work, but logic for dragging is removed
+main.Active = true
 main.Parent = screenGui
 
 local corner = Instance.new("UICorner")
@@ -41,41 +41,42 @@ stroke.Parent = main
 -- TITLE
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "ABYSS V7 [BRAINROT]"
+title.Text = "ABYSS V8 [ELITE]"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
 title.Parent = main
 
--- SPEED INPUT
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(1, -20, 0, 20)
-speedLabel.Position = UDim2.new(0, 10, 0, 55)
-speedLabel.Text = "WALKSPEED"
-speedLabel.TextColor3 = Color3.new(0.7, 0.7, 0.7)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Font = Enum.Font.GothamBold
-speedLabel.TextSize = 10
-speedLabel.TextXAlignment = "Left"
-speedLabel.Parent = main
-
+-- 1. SPEED INPUT
 local speedBox = Instance.new("TextBox")
 speedBox.Size = UDim2.new(0.9, 0, 0, 35)
-speedBox.Position = UDim2.new(0.05, 0, 0, 75)
+speedBox.Position = UDim2.new(0.05, 0, 0, 50)
 speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 speedBox.Text = "16"
 speedBox.TextColor3 = Color3.new(1, 1, 1)
 speedBox.Font = Enum.Font.Gotham
-speedBox.PlaceholderText = "Set Speed..."
+speedBox.PlaceholderText = "Set WalkSpeed..."
 speedBox.Parent = main
+Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 6)
 
--- PACKET SLIDER
+-- 2. PACKET TOGGLE (THE NEW PART)
+local packetToggle = Instance.new("TextButton")
+packetToggle.Size = UDim2.new(0.9, 0, 0, 40)
+packetToggle.Position = UDim2.new(0.05, 0, 0, 95)
+packetToggle.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+packetToggle.Text = "PACKET LAG: OFF"
+packetToggle.TextColor3 = Color3.new(1, 1, 1)
+packetToggle.Font = Enum.Font.GothamBold
+packetToggle.Parent = main
+Instance.new("UICorner", packetToggle).CornerRadius = UDim.new(0, 6)
+
+-- 3. PACKET SLIDER
 local lagLabel = Instance.new("TextLabel")
 lagLabel.Size = UDim2.new(1, -20, 0, 20)
-lagLabel.Position = UDim2.new(0, 10, 0, 125)
-lagLabel.Text = "PACKET STRESS: 0%"
-lagLabel.TextColor3 = Color3.fromRGB(80, 50, 255)
+lagLabel.Position = UDim2.new(0, 10, 0, 140)
+lagLabel.Text = "LAG INTENSITY: 0%"
+lagLabel.TextColor3 = Color3.fromRGB(150, 150, 255)
 lagLabel.BackgroundTransparency = 1
 lagLabel.Font = Enum.Font.GothamBold
 lagLabel.TextSize = 10
@@ -83,8 +84,8 @@ lagLabel.TextXAlignment = "Left"
 lagLabel.Parent = main
 
 local sliderFrame = Instance.new("Frame")
-sliderFrame.Size = UDim2.new(0.85, 0, 0, 10)
-sliderFrame.Position = UDim2.new(0.075, 0, 0, 150)
+sliderFrame.Size = UDim2.new(0.85, 0, 0, 8)
+sliderFrame.Position = UDim2.new(0.075, 0, 0, 165)
 sliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 sliderFrame.Parent = main
 
@@ -95,37 +96,35 @@ sliderFill.BorderSizePixel = 0
 sliderFill.Parent = sliderFrame
 
 local knob = Instance.new("TextButton")
-knob.Size = UDim2.new(0, 16, 0, 16)
-knob.Position = UDim2.new(0, -8, 0.5, -8)
+knob.Size = UDim2.new(0, 14, 0, 14)
+knob.Position = UDim2.new(0, -7, 0.5, -7)
 knob.BackgroundColor3 = Color3.new(1, 1, 1)
 knob.Text = ""
 knob.Parent = sliderFill
 Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
--- PHANTOM MODE (ANTI-HIT)
+-- 4. PHANTOM MODE (ANTI-HIT)
 local phantomBtn = Instance.new("TextButton")
 phantomBtn.Size = UDim2.new(0.9, 0, 0, 35)
-phantomBtn.Position = UDim2.new(0.05, 0, 0, 180)
+phantomBtn.Position = UDim2.new(0.05, 0, 0, 190)
 phantomBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 100)
-phantomBtn.Text = "PHANTOM MODE: OFF"
+phantomBtn.Text = "PHANTOM (ANTI-BAT): OFF"
 phantomBtn.TextColor3 = Color3.new(1, 1, 1)
 phantomBtn.Font = Enum.Font.GothamBold
+phantomBtn.TextSize = 10
 phantomBtn.Parent = main
 Instance.new("UICorner", phantomBtn).CornerRadius = UDim.new(0, 6)
 
--- GLOBAL ABYSS
-local abyssBtn = Instance.new("TextButton")
-abyssBtn.Size = UDim2.new(0.9, 0, 0, 35)
-abyssBtn.Position = UDim2.new(0.05, 0, 0, 225)
-abyssBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-abyssBtn.Text = "STALL TIME: OFF"
-abyssBtn.TextColor3 = Color3.new(1, 1, 1)
-abyssBtn.Font = Enum.Font.GothamBold
-abyssBtn.Parent = main
-Instance.new("UICorner", abyssBtn).CornerRadius = UDim.new(0, 6)
-
--- LOGIC: SLIDER (FIXED)
+-- LOGIC: SLIDER
 local isSliding = false
+local function updateLag()
+    if _G.LagActive then
+        settings().Network.IncomingReplicationLag = _G.AbyssLag
+    else
+        settings().Network.IncomingReplicationLag = 0
+    end
+end
+
 local function updateSlider()
 	local mousePos = UIS:GetMouseLocation().X
 	local framePos = sliderFrame.AbsolutePosition.X
@@ -133,37 +132,64 @@ local function updateSlider()
 	local percentage = math.clamp((mousePos - framePos) / frameWidth, 0, 1)
 	
 	sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-	lagLabel.Text = "PACKET STRESS: " .. math.floor(percentage * 100) .. "%"
-	
-	_G.AbyssLag = percentage * 25 -- Balanced Intensity
-	settings().Network.IncomingReplicationLag = _G.AbyssLag
+	lagLabel.Text = "LAG INTENSITY: " .. math.floor(percentage * 100) .. "%"
+	_G.AbyssLag = percentage * 30 -- Up to 30 seconds delay
+	updateLag()
 end
 
 knob.MouseButton1Down:Connect(function() isSliding = true end)
-UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then isSliding = false end
-end)
+UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then isSliding = false end end)
 UIS.InputChanged:Connect(function(input)
-	if isSliding and input.UserInputType == Enum.UserInputType.MouseMovement then
-		updateSlider()
-	end
+	if isSliding and input.UserInputType == Enum.UserInputType.MouseMovement then updateSlider() end
 end)
 
--- LOGIC: SPEED (FORCED EVERY FRAME)
-speedBox.FocusLost:Connect(function()
-	_G.AbyssSpeed = tonumber(speedBox.Text) or 16
+-- LOGIC: PACKET TOGGLE CLICK
+packetToggle.MouseButton1Click:Connect(function()
+    _G.LagActive = not _G.LagActive
+    packetToggle.Text = _G.LagActive and "PACKET LAG: ON" or "PACKET LAG: OFF"
+    packetToggle.BackgroundColor3 = _G.LagActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    updateLag()
 end)
 
+-- LOGIC: PHANTOM TOGGLE CLICK
+phantomBtn.MouseButton1Click:Connect(function()
+	_G.PhantomMode = not _G.PhantomMode
+	phantomBtn.Text = _G.PhantomMode and "PHANTOM: ACTIVE" or "PHANTOM (ANTI-BAT): OFF"
+	phantomBtn.BackgroundColor3 = _G.PhantomMode and Color3.fromRGB(100, 50, 200) or Color3.fromRGB(60, 30, 100)
+end)
+
+-- LOGIC: STALL BUTTON
+local stallBtn = Instance.new("TextButton")
+stallBtn.Size = UDim2.new(0.9, 0, 0, 35)
+stallBtn.Position = UDim2.new(0.05, 0, 0, 235)
+stallBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+stallBtn.Text = "TIME FREEZE (STALL)"
+stallBtn.TextColor3 = Color3.new(1, 1, 1)
+stallBtn.Font = Enum.Font.GothamBold
+stallBtn.Parent = main
+Instance.new("UICorner", stallBtn).CornerRadius = UDim.new(0, 6)
+
+local stalled = false
+stallBtn.MouseButton1Click:Connect(function()
+    stalled = not stalled
+    if stalled then
+        settings().Network.IncomingReplicationLag = 9e9
+        stallBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+    else
+        updateLag()
+        stallBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    end
+end)
+
+-- LOGIC: FORCED SPEED & PHANTOM (ANTI-BAT)
 RunService.RenderStepped:Connect(function()
 	local char = player.Character
 	if char then
 		local hum = char:FindFirstChild("Humanoid")
 		if hum then
-			hum.WalkSpeed = _G.AbyssSpeed
-			-- ANTI-STUN/HIT (PHANTOM MODE)
+			hum.WalkSpeed = tonumber(speedBox.Text) or 16
 			if _G.PhantomMode then
 				hum:ChangeState(Enum.HumanoidStateType.Physics)
-				hum.PlatformStand = false
 				for _, v in pairs(char:GetChildren()) do
 					if v:IsA("BasePart") then v.CanCollide = false end
 				end
@@ -172,41 +198,17 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- LOGIC: PHANTOM TOGGLE
-phantomBtn.MouseButton1Click:Connect(function()
-	_G.PhantomMode = not _G.PhantomMode
-	phantomBtn.Text = _G.PhantomMode and "PHANTOM MODE: ON" or "PHANTOM MODE: OFF"
-	phantomBtn.BackgroundColor3 = _G.PhantomMode and Color3.fromRGB(100, 50, 200) or Color3.fromRGB(60, 30, 100)
-end)
-
--- LOGIC: ABYSS TOGGLE
-local abyssOn = false
-abyssBtn.MouseButton1Click:Connect(function()
-	abyssOn = not abyssOn
-	if abyssOn then
-		abyssBtn.Text = "STALL TIME: ACTIVE"
-		abyssBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-		settings().Network.IncomingReplicationLag = 9e9
-	else
-		abyssBtn.Text = "STALL TIME: OFF"
-		abyssBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-		settings().Network.IncomingReplicationLag = _G.AbyssLag
-	end
-end)
-
--- EMERGENCY RESYNC (TOP RIGHT MINI BUTTON)
-local resync = Instance.new("TextButton")
-resync.Size = UDim2.new(0, 80, 0, 20)
-resync.Position = UDim2.new(0.05, 0, 0, 275)
-resync.BackgroundColor3 = Color3.fromRGB(50,50,50)
-resync.Text = "FULL SYNC"
-resync.TextColor3 = Color3.new(1,1,1)
-resync.Font = Enum.Font.Gotham
-resync.Parent = main
-
-resync.MouseButton1Click:Connect(function()
-	settings().Network.IncomingReplicationLag = 0
-	_G.AbyssSpeed = 16
-	_G.PhantomMode = false
-	print("Abyss Hub: Connection and Speed Resynced.")
+-- FULL RESET (Panic Button)
+local reset = Instance.new("TextButton")
+reset.Size = UDim2.new(0.9, 0, 0, 30)
+reset.Position = UDim2.new(0.05, 0, 0, 320)
+reset.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+reset.Text = "Full Reset / Stop Mod"
+reset.TextColor3 = Color3.new(0.5, 0.5, 0.5)
+reset.Font = Enum.Font.Gotham
+reset.Parent = main
+reset.MouseButton1Click:Connect(function()
+    _G.LagActive = false
+    settings().Network.IncomingReplicationLag = 0
+    screenGui:Destroy()
 end)
