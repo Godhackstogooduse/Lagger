@@ -3,29 +3,28 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
--- UI Parent (CoreGui for consistency)
+-- UI Parent
 local parentUI = (game:GetService("CoreGui") or player:WaitForChild("PlayerGui"))
 
--- CLEANUP OLD VERSIONS
-if parentUI:FindFirstChild("AbyssFinal") then parentUI.AbyssFinal:Destroy() end
+-- CLEANUP
+if parentUI:FindFirstChild("AbyssNoReset") then parentUI.AbyssNoReset:Destroy() end
 
--- GLOBAL SETTINGS (Persists through death)
+-- SETTINGS (Persists)
 _G.AbyssSpeed = 16
 _G.AbyssLagValue = 0
 _G.LagEnabled = false
 
--- UI SETUP (ResetOnSpawn = false means it never goes away)
+-- UI SETUP
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AbyssFinal"
+screenGui.Name = "AbyssNoReset"
 screenGui.ResetOnSpawn = false 
 screenGui.Parent = parentUI
 
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0, 240, 0, 300)
-main.Position = UDim2.new(1, -260, 0.5, -150) -- FIXED MIDDLE RIGHT
-main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+main.Position = UDim2.new(1, -260, 0.5, -150) -- MIDDLE RIGHT
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
 main.BorderSizePixel = 0
-main.Active = true
 main.Parent = screenGui
 
 local corner = Instance.new("UICorner")
@@ -34,73 +33,62 @@ corner.Parent = main
 
 local stroke = Instance.new("UIStroke")
 stroke.Thickness = 2
-stroke.Color = Color3.fromRGB(100, 50, 255)
+stroke.Color = Color3.fromRGB(120, 80, 255)
 stroke.Parent = main
 
 -- TITLE
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
-title.Text = "ABYSS V9 [STABLE]"
+title.Text = "ABYSS V10 [NO-RESET]"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+title.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
 title.Parent = main
 
--- 1. SPEED INPUT
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(1, -20, 0, 20)
-speedLabel.Position = UDim2.new(0, 10, 0, 55)
-speedLabel.Text = "SET SPEED:"
-speedLabel.TextColor3 = Color3.new(0.6, 0.6, 0.6)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Font = Enum.Font.GothamBold
-speedLabel.TextSize = 10
-speedLabel.TextXAlignment = "Left"
-speedLabel.Parent = main
-
+-- SPEED INPUT
 local speedBox = Instance.new("TextBox")
-speedBox.Size = UDim2.new(0.9, 0, 0, 35)
-speedBox.Position = UDim2.new(0.05, 0, 0, 75)
-speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+speedBox.Size = UDim2.new(0.9, 0, 0, 40)
+speedBox.Position = UDim2.new(0.05, 0, 0, 60)
+speedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 speedBox.Text = tostring(_G.AbyssSpeed)
 speedBox.TextColor3 = Color3.new(1, 1, 1)
 speedBox.Font = Enum.Font.Gotham
+speedBox.PlaceholderText = "Speed..."
 speedBox.Parent = main
 Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0, 6)
 
--- 2. LAG TOGGLE BUTTON
+-- LAG TOGGLE (THE NEW SYNC VERSION)
 local lagToggle = Instance.new("TextButton")
-lagToggle.Size = UDim2.new(0.9, 0, 0, 45)
-lagToggle.Position = UDim2.new(0.05, 0, 0, 125)
+lagToggle.Size = UDim2.new(0.9, 0, 0, 50)
+lagToggle.Position = UDim2.new(0.05, 0, 0, 115)
 lagToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-lagToggle.Text = "ACTIVATE LAG: OFF"
+lagToggle.Text = "PACKET LAG: OFF"
 lagToggle.TextColor3 = Color3.new(1, 1, 1)
 lagToggle.Font = Enum.Font.GothamBold
 lagToggle.Parent = main
-Instance.new("UICorner", lagToggle).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", lagToggle).CornerRadius = UDim.new(0, 8)
 
--- 3. LAG INTENSITY SLIDER
+-- INTENSITY SLIDER
 local lagLabel = Instance.new("TextLabel")
-lagLabel.Size = UDim2.new(1, -20, 0, 20)
-lagLabel.Position = UDim2.new(0, 10, 0, 180)
+lagLabel.Size = UDim2.new(1, 0, 0, 20)
+lagLabel.Position = UDim2.new(0, 0, 0, 175)
 lagLabel.Text = "INTENSITY: 0%"
-lagLabel.TextColor3 = Color3.fromRGB(150, 150, 255)
+lagLabel.TextColor3 = Color3.fromRGB(180, 180, 255)
 lagLabel.BackgroundTransparency = 1
 lagLabel.Font = Enum.Font.GothamBold
 lagLabel.TextSize = 10
-lagLabel.TextXAlignment = "Left"
 lagLabel.Parent = main
 
 local sliderFrame = Instance.new("Frame")
 sliderFrame.Size = UDim2.new(0.85, 0, 0, 8)
-sliderFrame.Position = UDim2.new(0.075, 0, 0, 205)
-sliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+sliderFrame.Position = UDim2.new(0.075, 0, 0, 200)
+sliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
 sliderFrame.Parent = main
 
 local sliderFill = Instance.new("Frame")
 sliderFill.Size = UDim2.new(0, 0, 1, 0)
-sliderFill.BackgroundColor3 = Color3.fromRGB(100, 50, 255)
+sliderFill.BackgroundColor3 = Color3.fromRGB(120, 80, 255)
 sliderFill.BorderSizePixel = 0
 sliderFill.Parent = sliderFrame
 
@@ -112,16 +100,37 @@ knob.Text = ""
 knob.Parent = sliderFill
 Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
--- LOGIC: SLIDER
-local sliding = false
-local function updateLag()
-    if _G.LagEnabled then
+-- LOGIC: SMOOTH SYNC (PREVENTS RESET)
+local function setLag(enabled)
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if enabled then
+        _G.LagEnabled = true
+        lagToggle.Text = "PACKET LAG: ACTIVE"
+        lagToggle.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
         settings().Network.IncomingReplicationLag = _G.AbyssLagValue
     else
+        -- PREVENT RESET LOGIC
+        lagToggle.Text = "SYNCING (STAY STILL)..."
+        lagToggle.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+        
+        -- Anchor briefly so the server doesn't kill you for teleporting
+        if hrp then hrp.Anchored = true end 
+        
         settings().Network.IncomingReplicationLag = 0
+        _G.LagEnabled = false
+        
+        task.wait(0.6) -- Give the packets time to dump
+        
+        if hrp then hrp.Anchored = false end
+        lagToggle.Text = "PACKET LAG: OFF"
+        lagToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
     end
 end
 
+-- SLIDER LOGIC
+local sliding = false
 knob.MouseButton1Down:Connect(function() sliding = true end)
 UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end end)
 
@@ -134,51 +143,39 @@ UIS.InputChanged:Connect(function(input)
         
         sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
         lagLabel.Text = "INTENSITY: " .. math.floor(percentage * 100) .. "%"
-        _G.AbyssLagValue = percentage * 20 -- Max 20-second delay for stability
-        updateLag()
+        _G.AbyssLagValue = percentage * 25
+        if _G.LagEnabled then settings().Network.IncomingReplicationLag = _G.AbyssLagValue end
     end
 end)
 
--- LOGIC: TOGGLE CLICK
+-- TOGGLE CLICK
 lagToggle.MouseButton1Click:Connect(function()
-    _G.LagEnabled = not _G.LagEnabled
-    lagToggle.Text = _G.LagEnabled and "ACTIVATE LAG: ON" or "ACTIVATE LAG: OFF"
-    lagToggle.BackgroundColor3 = _G.LagEnabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 50, 50)
-    updateLag()
+    setLag(not _G.LagEnabled)
 end)
 
--- LOGIC: SPEED & PERSISTENCE
-speedBox.FocusLost:Connect(function()
-    _G.AbyssSpeed = tonumber(speedBox.Text) or 16
-end)
-
+-- FORCED SPEED LOOP
 RunService.RenderStepped:Connect(function()
+    _G.AbyssSpeed = tonumber(speedBox.Text) or 16
     local char = player.Character
-    if char then
-        local hum = char:FindFirstChild("Humanoid")
-        if hum then
-            hum.WalkSpeed = _G.AbyssSpeed
-        end
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = _G.AbyssSpeed
     end
 end)
 
--- RESET SYNC BUTTON
-local resetBtn = Instance.new("TextButton")
-resetBtn.Size = UDim2.new(0.9, 0, 0, 35)
-resetBtn.Position = UDim2.new(0.05, 0, 0, 245)
-resetBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-resetBtn.Text = "EMERGENCY RESYNC"
-resetBtn.TextColor3 = Color3.new(1, 1, 1)
-resetBtn.Font = Enum.Font.Gotham
-resetBtn.Parent = main
-resetBtn.MouseButton1Click:Connect(function()
-    _G.LagEnabled = false
-    _G.AbyssLagValue = 0
-    _G.AbyssSpeed = 16
-    speedBox.Text = "16"
-    lagToggle.Text = "ACTIVATE LAG: OFF"
-    lagToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-    sliderFill.Size = UDim2.new(0, 0, 1, 0)
-    lagLabel.Text = "INTENSITY: 0%"
+-- EMERGENCY BUTTON
+local em = Instance.new("TextButton")
+em.Size = UDim2.new(0.9, 0, 0, 35)
+em.Position = UDim2.new(0.05, 0, 0, 245)
+em.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+em.Text = "STUCK? CLICK TO UN-ANCHOR"
+em.TextColor3 = Color3.new(0.8, 0, 0)
+em.Font = Enum.Font.Gotham
+em.Parent = main
+em.MouseButton1Click:Connect(function()
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.Anchored = false end
     settings().Network.IncomingReplicationLag = 0
+    _G.LagEnabled = false
+    lagToggle.Text = "PACKET LAG: OFF"
+    lagToggle.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 end)
